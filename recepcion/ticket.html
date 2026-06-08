@@ -942,9 +942,8 @@ function renderTicket(t, history, msgs, notes) {
     if (t.shipping_notes) { document.getElementById('shNotes').textContent = t.shipping_notes;   document.getElementById('shNotesRow').style.display = 'block'; }
   }
 
-  // Portal link (recepcion/ticket.html → soporte/portal.html)
-  const base = location.origin + location.pathname.replace('recepcion/ticket.html', '');
-  const link = base + 'portal.html?token=' + encodeURIComponent(t.access_token);
+  // Portal link — dominio oficial del cliente
+  const link = 'https://soporte.focusstore.net/portal.html?token=' + encodeURIComponent(t.access_token);
   document.getElementById('portalLinkBox').textContent = link;
 
   // Fecha límite de diagnóstico
@@ -1508,8 +1507,7 @@ async function sendMessage() {
     const cu  = ticketData?.sp_customers;
     const eq  = ticketData?.sp_equipment;
     const num = ticketData?.ticket_number || ticketId;
-    const portalBase = location.origin + location.pathname.replace('recepcion/ticket.html', '');
-    const portalLink = portalBase + 'portal.html?token=' + encodeURIComponent(ticketData?.access_token || '');
+    const portalLink = 'https://soporte.focusstore.net/portal.html?token=' + encodeURIComponent(ticketData?.access_token || '');
 
     if (cu) {
       // WhatsApp — parámetro correcto: "message"
