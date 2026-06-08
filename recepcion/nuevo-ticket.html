@@ -1,0 +1,639 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuevo Ticket · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0a0c10; --bg2:#12161f; --bg3:#1a1f2e;
+      --border:#2a2f3f; --text:#e8eaf0; --muted:#8892a4;
+      --accent:#3d6aff; --green:#2ed573; --red:#ff4757; --gold:#f5c842;
+    }
+    body { background:var(--bg); color:var(--text);
+      font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height:100vh; padding-bottom:48px; }
+
+    /* Topbar */
+    .topbar { background:var(--bg2); border-bottom:1px solid var(--border);
+      padding:12px 20px; display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:20; }
+    .btn-back { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); font-size:14px; padding:7px 14px; cursor:pointer;
+      font-family:inherit; text-decoration:none; transition:all .2s; }
+    .btn-back:hover { color:var(--text); }
+    .topbar h2 { font-size:16px; font-weight:700; flex:1; }
+
+    /* Container */
+    .container { max-width:600px; margin:0 auto; padding:20px 16px; }
+
+    /* Section headers */
+    .section-title {
+      font-size:12px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.5px; color:var(--muted);
+      padding:14px 0 8px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .section-title::before { content:''; flex:1; height:1px; background:var(--border); order:-1; display:none; }
+
+    /* Origin selector */
+    .origin-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .origin-card { position:relative; }
+    .origin-card input { position:absolute; opacity:0; pointer-events:none; }
+    .origin-card label {
+      display:flex; flex-direction:column; gap:4px;
+      background:var(--bg2); border:1.5px solid var(--border);
+      border-radius:12px; padding:14px 16px; cursor:pointer; transition:all .2s; margin:0;
+    }
+    .origin-card input:checked + label { border-color:var(--accent); background:rgba(61,106,255,.08); }
+    .origin-card label .oi { font-size:24px; margin-bottom:4px; }
+    .origin-card label h4 { font-size:13px; font-weight:700; color:var(--text); }
+    .origin-card label p  { font-size:11px; color:var(--muted); }
+
+    /* Fields */
+    .field { margin-bottom:14px; }
+    label.lbl { display:block; font-size:12px; font-weight:600; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+    label.lbl .req { color:var(--red); }
+    input[type="text"], input[type="tel"], input[type="email"], input[type="date"],
+    select, textarea {
+      width:100%; background:var(--bg2); border:1.5px solid var(--border);
+      border-radius:10px; color:var(--text); font-size:15px; padding:11px 14px;
+      outline:none; transition:border-color .2s; font-family:inherit; -webkit-appearance:none;
+    }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+    input.error, select.error, textarea.error { border-color:var(--red); }
+    textarea { resize:vertical; min-height:80px; }
+    select { cursor:pointer; appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;
+    }
+    select option { background:var(--bg3); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:400px) { .row { grid-template-columns:1fr; } }
+    .field-error { font-size:12px; color:var(--red); margin-top:4px; display:none; }
+    .field-error.show { display:block; }
+
+    /* Condition radios */
+    .radio-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .rc { position:relative; }
+    .rc input { position:absolute; opacity:0; pointer-events:none; }
+    .rc label { display:flex; flex-direction:column; align-items:center; gap:4px;
+      background:var(--bg2); border:1.5px solid var(--border); border-radius:10px;
+      padding:10px 6px; cursor:pointer; transition:all .2s; margin:0; }
+    .rc input:checked + label { border-color:var(--accent); background:rgba(61,106,255,.1); }
+    .rc label .ico { font-size:20px; }
+    .rc label .nm  { font-size:12px; font-weight:600; }
+
+    /* Accessories */
+    .acc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+    .ck { position:relative; }
+    .ck input { position:absolute; opacity:0; pointer-events:none; }
+    .ck label { display:flex; align-items:center; gap:8px;
+      background:var(--bg2); border:1.5px solid var(--border); border-radius:8px;
+      padding:9px 12px; cursor:pointer; transition:all .2s; margin:0;
+      font-size:13px; color:var(--text); }
+    .ck input:checked + label { border-color:var(--accent); background:rgba(61,106,255,.1); color:#a0b0ff; }
+    .ckb { width:16px; height:16px; border:2px solid var(--border); border-radius:4px;
+      flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .ck input:checked + label .ckb { background:var(--accent); border-color:var(--accent); }
+    .ck input:checked + label .ckb::after { content:'✓'; font-size:10px; color:white; font-weight:700; }
+
+    /* Customer search */
+    .search-existing {
+      background:rgba(61,106,255,.06); border:1px solid rgba(61,106,255,.2);
+      border-radius:10px; padding:12px 14px; margin-bottom:14px;
+    }
+    .search-existing h4 { font-size:13px; font-weight:700; margin-bottom:8px; }
+    .search-row { display:flex; gap:8px; }
+    .search-row input { flex:1; font-size:14px; }
+    .search-row button { background:var(--accent); color:white; border:none; border-radius:8px;
+      padding:0 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; }
+    .search-result {
+      background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      padding:10px 12px; margin-top:8px; display:none; cursor:pointer; transition:border-color .2s;
+    }
+    .search-result.show { display:block; }
+    .search-result:hover { border-color:var(--accent); }
+    .search-result h4 { font-size:13px; font-weight:600; }
+    .search-result p  { font-size:11px; color:var(--muted); }
+
+    /* Divider */
+    .divider { height:1px; background:var(--border); margin:18px 0; }
+
+    /* Buttons */
+    .btn {
+      padding:13px 20px; border-radius:12px; font-size:15px; font-weight:700;
+      border:none; cursor:pointer; font-family:inherit; transition:all .2s;
+    }
+    .btn-submit { background:var(--green); color:#0a0c10; width:100%; }
+    .btn-submit:hover:not(:disabled) { background:#40e080; transform:translateY(-1px); }
+    .btn-submit:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-spin { width:18px; height:18px; border:2px solid rgba(0,0,0,.2); border-top-color:#0a0c10;
+      border-radius:50%; animation:spin .7s linear infinite; display:none; margin:0 auto; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Alert */
+    .alert { padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:14px; display:none; }
+    .alert.show { display:block; }
+    .alert-error { background:rgba(255,71,87,.1); border:1px solid rgba(255,71,87,.3); color:var(--red); }
+    .alert-success { background:rgba(46,213,115,.1); border:1px solid rgba(46,213,115,.3); color:var(--green); }
+
+    /* Loading overlay */
+    .loading-overlay { position:fixed; inset:0; background:rgba(10,12,16,.9);
+      display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:100; }
+    .loading-overlay.show { display:flex; }
+    .big-spinner { width:44px; height:44px; border:3px solid var(--border);
+      border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="big-spinner"></div>
+  <p style="color:var(--muted);font-size:14px">Registrando ticket…</p>
+</div>
+
+<div class="topbar">
+  <a href="index.html" class="btn-back">← Dashboard</a>
+  <h2>Nuevo Ticket</h2>
+</div>
+
+<div class="container">
+
+  <div class="alert alert-error" id="errAlert"></div>
+
+  <!-- ── Origen ────────────────────────────────────────────── -->
+  <div class="section-title">Origen del ticket</div>
+  <div class="origin-grid">
+    <div class="origin-card">
+      <input type="radio" name="origin" id="orig-presencial" value="staff_presencial" checked>
+      <label for="orig-presencial">
+        <span class="oi">🧑‍💼</span>
+        <h4>Cliente en tienda</h4>
+        <p>El cliente está presente con el equipo</p>
+      </label>
+    </div>
+    <div class="origin-card">
+      <input type="radio" name="origin" id="orig-telefono" value="staff_telefono">
+      <label for="orig-telefono">
+        <span class="oi">📞</span>
+        <h4>Por teléfono</h4>
+        <p>El cliente llamó y reporta el problema</p>
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Cliente ───────────────────────────────────────────── -->
+  <div class="section-title">Datos del cliente</div>
+
+  <div class="search-existing">
+    <h4>🔍 Buscar cliente existente</h4>
+    <div class="search-row">
+      <input type="text" id="searchClient" placeholder="Nombre o teléfono…" oninput="searchClients()">
+      <button onclick="clearClientSearch()">Limpiar</button>
+    </div>
+    <div class="search-result" id="searchResult"></div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label class="lbl" for="fullName">Nombre completo <span class="req">*</span></label>
+      <input type="text" id="fullName" placeholder="Juan Pérez" autocomplete="off">
+      <span class="field-error" id="err-name">Requerido.</span>
+    </div>
+    <div class="field">
+      <label class="lbl" for="phone">Teléfono <span class="req">*</span></label>
+      <input type="tel" id="phone" placeholder="9999-0000">
+      <span class="field-error" id="err-phone">Requerido.</span>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="lbl" for="email">Correo electrónico</label>
+      <input type="email" id="email" placeholder="Opcional">
+    </div>
+    <div class="field">
+      <label class="lbl" for="identidad">N° Identidad / RTN</label>
+      <input type="text" id="identidad" placeholder="Opcional">
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── Equipo ─────────────────────────────────────────────── -->
+  <div class="section-title">Datos del equipo</div>
+
+  <div class="field">
+    <label class="lbl" for="category">Categoría <span class="req">*</span></label>
+    <select id="category">
+      <option value="">Seleccione…</option>
+      <option value="camara">📷 Cámaras</option>
+      <option value="lente">🔭 Lentes</option>
+      <option value="flash">⚡ Flashes</option>
+      <option value="luz">💡 Luces LED</option>
+      <option value="audio">🎙 Audio</option>
+      <option value="gimbal">🎬 Gimbals</option>
+      <option value="drone">🚁 Drones</option>
+      <option value="computadora">💻 Computadoras</option>
+      <option value="monitor">🖥 Monitores</option>
+      <option value="tripode">📸 Trípodes</option>
+      <option value="otro">🔧 Otro</option>
+    </select>
+    <span class="field-error" id="err-cat">Requerido.</span>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label class="lbl" for="brand">Marca <span class="req">*</span></label>
+      <input type="text" id="brand" placeholder="Sony, Canon…">
+      <span class="field-error" id="err-brand">Requerido.</span>
+    </div>
+    <div class="field">
+      <label class="lbl" for="model">Modelo <span class="req">*</span></label>
+      <input type="text" id="model" placeholder="A7 IV, 5D…">
+      <span class="field-error" id="err-model">Requerido.</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label class="lbl" for="serialN">N° de serie</label>
+      <input type="text" id="serialN" placeholder="Opcional">
+    </div>
+    <div class="field">
+      <label class="lbl" for="eColor">Color</label>
+      <input type="text" id="eColor" placeholder="Ej: Negro">
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="lbl">Condición física</label>
+    <div class="radio-row">
+      <div class="rc">
+        <input type="radio" name="cond" id="cb" value="bueno" checked>
+        <label for="cb"><span class="ico">✅</span><span class="nm">Bueno</span></label>
+      </div>
+      <div class="rc">
+        <input type="radio" name="cond" id="cr" value="regular">
+        <label for="cr"><span class="ico">⚠️</span><span class="nm">Regular</span></label>
+      </div>
+      <div class="rc">
+        <input type="radio" name="cond" id="cd" value="dañado">
+        <label for="cd"><span class="ico">🔴</span><span class="nm">Dañado</span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="lbl">Accesorios incluidos</label>
+    <div class="acc-grid">
+      <div class="ck"><input type="checkbox" id="a1" value="Cargador/Adaptador"><label for="a1"><span class="ckb"></span>Cargador</label></div>
+      <div class="ck"><input type="checkbox" id="a2" value="Batería"><label for="a2"><span class="ckb"></span>Batería</label></div>
+      <div class="ck"><input type="checkbox" id="a3" value="Estuche/Bolso"><label for="a3"><span class="ckb"></span>Estuche/Bolso</label></div>
+      <div class="ck"><input type="checkbox" id="a4" value="Cable USB/HDMI"><label for="a4"><span class="ckb"></span>Cable USB/HDMI</label></div>
+      <div class="ck"><input type="checkbox" id="a5" value="Tarjeta de memoria"><label for="a5"><span class="ckb"></span>Memoria</label></div>
+      <div class="ck"><input type="checkbox" id="a6" value="Control remoto"><label for="a6"><span class="ckb"></span>Control remoto</label></div>
+      <div class="ck"><input type="checkbox" id="a7" value="Filtro(s)"><label for="a7"><span class="ckb"></span>Filtro(s)</label></div>
+      <div class="ck"><input type="checkbox" id="a8" value="Correa/Bandolera"><label for="a8"><span class="ckb"></span>Correa</label></div>
+    </div>
+    <input type="text" id="accNotes" placeholder="Notas de accesorios (ej: falta la tapa del lente)…">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── Falla ──────────────────────────────────────────────── -->
+  <div class="section-title">Falla y diagnóstico inicial</div>
+
+  <div class="field">
+    <label class="lbl" for="fault">Falla reportada por el cliente <span class="req">*</span></label>
+    <textarea id="fault" rows="3" placeholder="Describa la falla que reporta el cliente…"></textarea>
+    <span class="field-error" id="err-fault">Requerido.</span>
+  </div>
+
+  <div class="field">
+    <label class="lbl" for="staffNotes">Notas internas de recepción</label>
+    <textarea id="staffNotes" rows="2" placeholder="Observaciones del staff (no visibles al cliente)…"></textarea>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── Asignación ─────────────────────────────────────────── -->
+  <div class="section-title">Asignación y estado inicial</div>
+
+  <div class="row">
+    <div class="field">
+      <label class="lbl" for="assignTo">Asignar a técnico</label>
+      <select id="assignTo">
+        <option value="">Sin asignar</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="lbl" for="initStatus">Estado inicial</label>
+      <select id="initStatus">
+        <option value="equipo_recibido">📬 Equipo recibido (en tienda)</option>
+        <option value="solicitud_recibida">📝 Solicitud recibida (sin equipo aún)</option>
+        <option value="en_diagnostico">🔍 En diagnóstico</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="lbl" for="diagFee">Cargo por diagnóstico (L)</label>
+    <input type="text" id="diagFee" placeholder="500" value="500">
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Submit -->
+  <button class="btn btn-submit" id="btnSubmit" onclick="submitTicket()">
+    ✅ Crear ticket
+  </button>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let session   = null;
+let existingCustomerId = null;
+let searchTimer = null;
+let techData  = {}; // id → { full_name, email, phone }
+
+window.addEventListener('DOMContentLoaded', async () => {
+  session = getSession();
+  if (!session) { location.href = '../login.html'; return; }
+  await loadTechs();
+
+  // Origin change: update initStatus default
+  document.querySelectorAll('input[name="origin"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const initSel = document.getElementById('initStatus');
+      initSel.value = r.value === 'staff_presencial' ? 'equipo_recibido' : 'solicitud_recibida';
+    });
+  });
+});
+
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) { localStorage.removeItem('sp_session'); return null; }
+    return s;
+  } catch (_) { return null; }
+}
+
+async function loadTechs() {
+  const { data } = await sb.from('sp_profiles')
+    .select('id,full_name,role,email,phone').eq('is_active', true)
+    .in('role', ['tecnico','admin','supervisor']);
+  if (data) {
+    techData = {};
+    const sel = document.getElementById('assignTo');
+    data.forEach(p => {
+      techData[p.id] = { full_name: p.full_name, email: p.email, phone: p.phone };
+      const o = document.createElement('option');
+      o.value       = p.id;
+      o.textContent = `${p.full_name} (${p.role})`;
+      sel.appendChild(o);
+    });
+    // Pre-select self if tecnico
+    if (['tecnico','admin'].includes(session.role)) sel.value = session.id;
+  }
+}
+
+/* ── Customer search ────────────────────────────────────────── */
+function searchClients() {
+  clearTimeout(searchTimer);
+  const q = document.getElementById('searchClient').value.trim();
+  if (q.length < 2) { document.getElementById('searchResult').classList.remove('show'); return; }
+  searchTimer = setTimeout(() => doSearch(q), 400);
+}
+
+async function doSearch(q) {
+  const { data } = await sb.from('sp_customers')
+    .select('id,full_name,phone,email')
+    .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
+    .limit(5);
+
+  const res = document.getElementById('searchResult');
+  if (!data?.length) { res.innerHTML = '<p style="font-size:13px;color:var(--muted)">Sin resultados.</p>'; res.classList.add('show'); return; }
+
+  res.innerHTML = data.map(c =>
+    `<div onclick="selectClient('${c.id}','${c.full_name.replace(/'/g,"\\'")}','${c.phone||''}','${c.email||''}')">
+      <h4>${c.full_name}</h4>
+      <p>${c.phone || ''} ${c.email ? '· ' + c.email : ''}</p>
+    </div>`
+  ).join('<hr style="border:none;border-top:1px solid var(--border);margin:6px 0">');
+  res.classList.add('show');
+}
+
+function selectClient(id, name, phone, email) {
+  existingCustomerId = id;
+  document.getElementById('fullName').value = name;
+  document.getElementById('phone').value    = phone;
+  document.getElementById('email').value    = email;
+  document.getElementById('searchResult').classList.remove('show');
+  document.getElementById('searchClient').value = '';
+}
+
+function clearClientSearch() {
+  existingCustomerId = null;
+  document.getElementById('searchClient').value = '';
+  document.getElementById('fullName').value  = '';
+  document.getElementById('phone').value     = '';
+  document.getElementById('email').value     = '';
+  document.getElementById('identidad').value = '';
+  document.getElementById('searchResult').classList.remove('show');
+}
+
+/* ── Validation ─────────────────────────────────────────────── */
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function err(fid, eid) { document.getElementById(fid)?.classList.add('error'); document.getElementById(eid)?.classList.add('show'); }
+function clearErrs() {
+  document.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
+  document.getElementById('errAlert').classList.remove('show');
+}
+
+function validate() {
+  clearErrs(); let ok = true;
+  if (!v('fullName')) { err('fullName','err-name'); ok = false; }
+  if (!v('phone'))    { err('phone','err-phone');   ok = false; }
+  if (!v('category')) { err('category','err-cat');  ok = false; }
+  if (!v('brand'))    { err('brand','err-brand');   ok = false; }
+  if (!v('model'))    { err('model','err-model');   ok = false; }
+  if (!v('fault'))    { err('fault','err-fault');   ok = false; }
+  return ok;
+}
+
+/* ── Submit ─────────────────────────────────────────────────── */
+async function submitTicket() {
+  if (!validate()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('btnSubmit').disabled = true;
+
+  try {
+    // 1. Customer
+    let customerId = existingCustomerId;
+    if (!customerId) {
+      const { data: cu, error: cuE } = await sb.from('sp_customers').insert({
+        full_name: v('fullName'), phone: v('phone'),
+        email: v('email') || null, identity_number: v('identidad') || null,
+        created_by: session.id
+      }).select('id').single();
+      if (cuE) throw cuE;
+      customerId = cu.id;
+    }
+
+    // 2. Accessories
+    const accessories = [];
+    document.querySelectorAll('input[id^="a"][type="checkbox"]').forEach(c => { if (c.checked) accessories.push(c.value); });
+
+    // 3. Equipment
+    const { data: eq, error: eqE } = await sb.from('sp_equipment').insert({
+      customer_id: customerId, category: v('category'),
+      brand: v('brand'), model: v('model'),
+      serial_number: v('serialN') || null, color: v('eColor') || null,
+      physical_condition: document.querySelector('input[name="cond"]:checked')?.value || 'bueno',
+      accessories: accessories.length ? accessories : null,
+      accessories_notes: v('accNotes') || null
+    }).select('id').single();
+    if (eqE) throw eqE;
+
+    // 4. Ticket
+    const origin     = document.querySelector('input[name="origin"]:checked')?.value || 'staff_presencial';
+    const initStatus = v('initStatus') || 'equipo_recibido';
+    const assignTo   = v('assignTo') || null;
+    const diagFee    = parseFloat(v('diagFee')) || 0;
+
+    const onArrival = initStatus === 'equipo_recibido';
+
+    const ticketPayload = {
+      customer_id:          customerId,
+      equipment_id:         eq.id,
+      ticket_origin:        origin,
+      equipment_on_arrival: onArrival,
+      reported_fault:       v('fault'),
+      assigned_to:          assignTo,
+      created_by:           session.id,
+      received_by:          onArrival ? session.id : null,
+      terms_accepted:       true,
+      terms_accepted_at:    new Date().toISOString(),
+      diagnosis_fee:        diagFee
+    };
+    // Override status if not on arrival
+    if (!onArrival) ticketPayload.status = initStatus;
+
+    const { data: ticket, error: tE } = await sb.from('sp_tickets')
+      .insert(ticketPayload).select('id,ticket_number,access_token').single();
+    if (tE) throw tE;
+
+    // 5. Internal note if staff notes provided
+    if (v('staffNotes')) {
+      await sb.from('sp_ticket_internal_notes').insert({
+        ticket_id: ticket.id, note_type: 'recepcion',
+        author_id: session.id, content: v('staffNotes')
+      });
+    }
+
+    // 6. Notify assigned technician (email + WhatsApp)
+    const techId = v('assignTo');
+    if (techId && techData[techId]) {
+      const tech = techData[techId];
+      // Email
+      if (tech.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              techEmail:    tech.email,
+              techName:     tech.full_name,
+              ticketNumber: ticket.ticket_number,
+              deviceBrand:  v('brand'),
+              deviceModel:  v('model'),
+              reportedFault: v('fault')
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      // WhatsApp
+      if (tech.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: tech.phone,
+              message: `🔧 *Focus Store Soporte*\n\nHola ${tech.full_name}, se te asignó un nuevo ticket.\n\n🎫 *Ticket:* #${ticket.ticket_number}\n💻 *Equipo:* ${v('brand')} ${v('model')}\n🔍 *Falla:* ${v('fault').substring(0, 150)}\n\nRevísalo en tu panel:\nhttps://soporte.focusstore.net/tecnico/index.html`
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // 7. Send confirmation to client (email + WhatsApp)
+    const clientEmail = v('email');
+    const clientPhone = v('phone');
+    const clientName  = v('fullName');
+    const brand       = v('brand');
+    const model       = v('model');
+    const ticketNum   = ticket.ticket_number;
+
+    if (clientEmail) {
+      document.querySelector('#loadingOverlay p').textContent = 'Enviando confirmación al cliente…';
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientName, clientEmail,
+            ticketNumber: ticketNum,
+            deviceBrand: brand,
+            deviceModel: model,
+            portalToken: ticket.access_token
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+    if (clientPhone) {
+      const portalLink = `https://soporte.focusstore.net/portal.html?token=${ticket.access_token}`;
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: clientPhone,
+            message: `👋 Hola ${clientName}! Tu equipo quedó registrado en *Focus Store*.\n\n🎫 *Ticket:* #${ticketNum}\n💻 *Equipo:* ${brand} ${model}\n\nConsulta el estado de tu equipo aquí:\n${portalLink}\n\n¡Gracias por confiar en nosotros! 🙏`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    // Redirect to ticket detail
+    location.href = `ticket.html?id=${ticket.id}&new=1`;
+
+  } catch (ex) {
+    console.error(ex);
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('btnSubmit').disabled = false;
+    const el = document.getElementById('errAlert');
+    el.textContent = '⚠️ Error: ' + (ex.message || 'Intente de nuevo.');
+    el.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+// ── Anti-cache ────────────────────────────────────────────────
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true); });
+</script>
+</body>
+</html>

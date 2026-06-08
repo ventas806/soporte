@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solicitud Registrada · Focus Store</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header-title h1 { font-size: 15px; font-weight: 700; }
+    .header-title p  { font-size: 12px; color: var(--muted); }
+
+    /* ── Content ─────────────────────────────────────────────── */
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+      flex: 1;
+    }
+
+    /* ── Success icon ───────────────────────────────────────── */
+    .success-icon {
+      width: 72px; height: 72px;
+      background: rgba(46,213,115,.15);
+      border: 2px solid rgba(46,213,115,.35);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 20px;
+      animation: popIn .4s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(.6); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+
+    .success-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .success-sub {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* ── Ticket card ────────────────────────────────────────── */
+    .ticket-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .ticket-header {
+      background: linear-gradient(135deg, #1a2340, #1e1a35);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ticket-header span { font-size: 12px; color: var(--muted); }
+    .ticket-number {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .ticket-copy {
+      background: rgba(61,106,255,.15);
+      border: 1px solid rgba(61,106,255,.3);
+      color: var(--accent);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .ticket-copy:hover { background: rgba(61,106,255,.25); }
+    .ticket-copy.copied { color: var(--green); }
+
+    .ticket-body { padding: 18px 20px; }
+    .ticket-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .ticket-row:last-child { margin-bottom: 0; }
+    .ticket-row .icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .ticket-row .label { font-size: 12px; color: var(--muted); margin-bottom: 1px; }
+    .ticket-row .value { font-size: 14px; font-weight: 500; }
+
+    /* ── Status badge ───────────────────────────────────────── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-badge.recibido  { background: rgba(46,213,115,.12); color: var(--green); border: 1px solid rgba(46,213,115,.3); }
+    .status-badge.solicitud { background: rgba(61,106,255,.12); color: var(--accent); border: 1px solid rgba(61,106,255,.3); }
+    .status-badge.camino    { background: rgba(245,200,66,.12); color: var(--gold);   border: 1px solid rgba(245,200,66,.3); }
+
+    /* ── Portal link card ───────────────────────────────────── */
+    .portal-card {
+      background: rgba(61,106,255,.07);
+      border: 1.5px solid rgba(61,106,255,.25);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .portal-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .portal-card p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+    .portal-link-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .portal-link-box:hover { border-color: var(--accent); }
+
+    .btn-portal {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: var(--accent);
+      color: white;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .btn-portal:hover { background: #5278ff; transform: translateY(-1px); }
+
+    /* ── Next steps ─────────────────────────────────────────── */
+    .next-steps {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .next-steps h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 14px;
+    }
+    .step-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .step-item:last-child { margin-bottom: 0; }
+    .step-num {
+      width: 28px; height: 28px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .step-content h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .step-content p  { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+    /* ── Info box ───────────────────────────────────────────── */
+    .info-box {
+      display: flex;
+      gap: 10px;
+      background: rgba(245,200,66,.06);
+      border: 1px solid rgba(245,200,66,.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+    .info-box .ic { font-size: 18px; flex-shrink: 0; }
+    .info-box p { font-size: 12px; color: #c8a820; line-height: 1.5; }
+
+    /* ── Action buttons ─────────────────────────────────────── */
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 10px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+    /* ── Error state ────────────────────────────────────────── */
+    #errorState { display: none; text-align: center; padding: 60px 20px; }
+    #errorState .err-icon { font-size: 48px; margin-bottom: 16px; }
+    #errorState h2 { font-size: 18px; margin-bottom: 8px; }
+    #errorState p  { font-size: 13px; color: var(--muted); }
+
+    /* ── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: var(--green);
+      transition: transform .3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 99;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">📷</div>
+  <div class="header-title">
+    <h1>Focus Store</h1>
+    <p>Soporte Técnico</p>
+  </div>
+</div>
+
+<div class="container" id="mainContent">
+
+  <!-- ── Success ────────────────────────────────────────────── -->
+  <div class="success-icon">✅</div>
+  <h2 class="success-title">¡Solicitud registrada!</h2>
+  <p class="success-sub" id="successSub">
+    Su solicitud de soporte fue registrada exitosamente.<br>
+    Guarde su número de ticket.
+  </p>
+
+  <!-- ── Ticket card ────────────────────────────────────────── -->
+  <div class="ticket-card">
+    <div class="ticket-header">
+      <div>
+        <span>Número de ticket</span>
+        <div class="ticket-number" id="ticketNumber">TKT-2026-0000</div>
+      </div>
+      <button class="ticket-copy" id="btnCopyTicket" onclick="copyTicket()">Copiar</button>
+    </div>
+    <div class="ticket-body">
+      <div class="ticket-row">
+        <span class="icon">📅</span>
+        <div>
+          <div class="label">Fecha de registro</div>
+          <div class="value" id="ticketDate">—</div>
+        </div>
+      </div>
+      <div class="ticket-row">
+        <span class="icon">🔵</span>
+        <div>
+          <div class="label">Estado actual</div>
+          <div class="value" id="ticketStatus">—</div>
+        </div>
+      </div>
+      <div class="ticket-row">
+        <span class="icon">🏢</span>
+        <div>
+          <div class="label">Tienda</div>
+          <div class="value">Focus Store · Plaza Premier, 2do nivel · Col. Humuya, Tegucigalpa</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Portal link ────────────────────────────────────────── -->
+  <div class="portal-card">
+    <h3>🔗 Consulte su ticket en línea</h3>
+    <p>Use este enlace para ver el estado actualizado de su equipo, mensajes del técnico y aprobar cotizaciones.</p>
+    <div class="portal-link-box" id="portalLink" onclick="copyPortalLink()">
+      Generando enlace…
+    </div>
+    <a href="#" id="btnPortal" class="btn-portal" target="_blank">
+      Ver estado del ticket →
+    </a>
+  </div>
+
+  <!-- ── Info reminder ──────────────────────────────────────── -->
+  <div class="info-box">
+    <span class="ic">⚠️</span>
+    <p>Guarde este enlace. Es su acceso personal al ticket y <strong>no requiere contraseña</strong>. Comparta con cuidado.</p>
+  </div>
+
+  <!-- ── Next steps ─────────────────────────────────────────── -->
+  <div class="next-steps">
+    <h3>¿Qué sigue?</h3>
+    <div id="nextStepsContent">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ── Actions ────────────────────────────────────────────── -->
+  <div class="actions">
+    <button class="btn-secondary" onclick="copyPortalLink()">
+      📋 Copiar enlace del portal
+    </button>
+    <a href="ingreso.html" class="btn-secondary">
+      ➕ Registrar otro equipo
+    </a>
+  </div>
+
+</div>
+
+<!-- Error state -->
+<div class="container" id="errorState">
+  <div class="err-icon">⚠️</div>
+  <h2>Enlace inválido</h2>
+  <p>No se encontraron datos de confirmación.<br>Verifique el enlace o registre una nueva solicitud.</p>
+  <br>
+  <a href="ingreso.html" style="color:var(--accent)">← Registrar nueva solicitud</a>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+const p      = new URLSearchParams(location.search);
+const ticket = p.get('ticket');
+const token  = p.get('token');
+const mode   = p.get('mode') || 'remoto';
+
+if (!ticket || !token) {
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('errorState').style.display  = 'block';
+} else {
+  init();
+}
+
+function init() {
+  const isPresencial = (mode === 'presencial');
+  const isCourier    = (mode === 'courier'); // not used now but for future
+
+  // Ticket number
+  document.getElementById('ticketNumber').textContent = ticket;
+
+  // Date
+  document.getElementById('ticketDate').textContent =
+    new Date().toLocaleDateString('es-HN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+  // Status badge
+  let statusHTML, statusSub;
+  if (isPresencial) {
+    statusHTML = `<span class="status-badge recibido">✅ Equipo recibido</span>`;
+    statusSub  = 'Su equipo ya está en nuestras manos y será revisado a la brevedad.';
+  } else {
+    // Check if it was courier (we can't know from URL alone, default to solicitud)
+    statusHTML = `<span class="status-badge solicitud">📝 Solicitud recibida</span>`;
+    statusSub  = 'Recibiremos su equipo pronto y le notificaremos cuando llegue.';
+  }
+  document.getElementById('ticketStatus').innerHTML = statusHTML;
+
+  // Success subtitle
+  document.getElementById('successSub').innerHTML =
+    `Su solicitud fue registrada exitosamente.<br><span style="color:var(--muted)">${statusSub}</span>`;
+
+  // Portal link
+  const portalUrl = location.origin + location.pathname.replace('confirmacion.html', '') +
+                    'portal.html?token=' + encodeURIComponent(token);
+  document.getElementById('portalLink').textContent = portalUrl;
+  document.getElementById('btnPortal').href = portalUrl;
+
+  // Next steps
+  const steps = isPresencial ? [
+    { n: '1', title: 'Diagnóstico técnico',
+      desc: 'Nuestro técnico evaluará el equipo y preparará un diagnóstico detallado.' },
+    { n: '2', title: 'Cotización de reparación',
+      desc: 'Recibirá una cotización con el costo estimado. Usted aprueba o rechaza.' },
+    { n: '3', title: 'Reparación y pruebas',
+      desc: 'Una vez aprobada, realizamos la reparación y verificamos su funcionamiento.' },
+    { n: '4', title: 'Notificación de retiro',
+      desc: 'Le avisaremos cuando el equipo esté listo. Tiene 15 días calendario para retirarlo.' }
+  ] : [
+    { n: '1', title: 'Envíe su equipo',
+      desc: 'Háganos llegar el equipo según el método que indicó. Embálelo con cuidado.' },
+    { n: '2', title: 'Confirmación de recepción',
+      desc: 'Le notificaremos cuando el equipo llegue a nuestras instalaciones.' },
+    { n: '3', title: 'Diagnóstico y cotización',
+      desc: 'Evaluamos el equipo y le enviamos una cotización de reparación.' },
+    { n: '4', title: 'Reparación y retiro',
+      desc: 'Reparamos el equipo y le avisamos cuando esté listo para retiro o envío.' }
+  ];
+
+  document.getElementById('nextStepsContent').innerHTML = steps.map(s => `
+    <div class="step-item">
+      <div class="step-num">${s.n}</div>
+      <div class="step-content">
+        <h4>${s.title}</h4>
+        <p>${s.desc}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ── Copy functions ─────────────────────────────────────────── */
+function copyTicket() {
+  navigator.clipboard.writeText(ticket).then(() => {
+    const btn = document.getElementById('btnCopyTicket');
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyPortalLink() {
+  const link = document.getElementById('portalLink').textContent;
+  navigator.clipboard.writeText(link).then(() => showToast('✓ Enlace copiado'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

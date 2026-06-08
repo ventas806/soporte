@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Técnico · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0a0c10; --bg2:#12161f; --bg3:#1a1f2e;
+      --border:#2a2f3f; --text:#e8eaf0; --muted:#8892a4;
+      --accent:#3d6aff; --green:#2ed573; --red:#ff4757; --gold:#f5c842; --orange:#ff9f43;
+    }
+    body { background:var(--bg); color:var(--text);
+      font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height:100vh; }
+
+    /* Topbar */
+    .topbar { background:var(--bg2); border-bottom:1px solid var(--border);
+      padding:13px 20px; display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:20; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,var(--accent),#6a3dff);
+      border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:17px; }
+    .brand h1 { font-size:14px; font-weight:700; }
+    .brand p  { font-size:10px; color:var(--muted); }
+    .topbar-spacer { flex:1; }
+    .user-chip { display:flex; align-items:center; gap:8px; background:var(--bg3);
+      border:1px solid var(--border); border-radius:20px; padding:5px 12px; cursor:pointer; }
+    .user-av { width:26px; height:26px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .user-chip span { font-size:12px; font-weight:600; }
+    .btn-logout { background:none; border:none; color:var(--muted); font-size:14px;
+      cursor:pointer; padding:2px 6px; border-radius:6px; }
+    .btn-logout:hover { color:var(--red); }
+
+    /* Page */
+    .page { max-width:800px; margin:0 auto; padding:18px 16px; }
+
+    /* Privacy notice */
+    .privacy-notice {
+      display:flex; align-items:center; gap:10px;
+      background:rgba(46,213,115,.07); border:1px solid rgba(46,213,115,.2);
+      border-radius:10px; padding:10px 14px; margin-bottom:16px;
+    }
+    .privacy-notice .ic { font-size:18px; }
+    .privacy-notice p { font-size:12px; color:#5ae08a; }
+
+    /* Stats */
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+    .stat { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; transition:border-color .2s; }
+    .stat:hover { border-color:var(--accent); }
+    .stat.active { border-color:var(--accent); background:rgba(61,106,255,.07); }
+    .stat-n  { font-size:26px; font-weight:800; }
+    .stat-l  { font-size:11px; color:var(--muted); margin-top:3px; }
+    .stat.blue   .stat-n { color:var(--accent); }
+    .stat.gold   .stat-n { color:var(--gold); }
+    .stat.green  .stat-n { color:var(--green); }
+
+    /* Ticket cards */
+    .ticket-card {
+      background:var(--bg2); border:1px solid var(--border); border-radius:14px;
+      margin-bottom:10px; overflow:hidden; cursor:pointer;
+      transition:border-color .2s, background .2s;
+    }
+    .ticket-card:hover { border-color:var(--accent); }
+    .ticket-card.expanded { border-color:var(--accent); }
+
+    .tc-header {
+      display:flex; align-items:center; gap:12px; padding:13px 16px;
+    }
+    .tc-num { font-size:13px; font-weight:800; font-family:'SF Mono','Fira Code',monospace; color:var(--accent); flex-shrink:0; }
+    .tc-equip { flex:1; min-width:0; }
+    .tc-equip h4 { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-equip p  { font-size:11px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tc-status .chip {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:4px 10px; border-radius:16px; font-size:11px; font-weight:600; white-space:nowrap;
+    }
+    .chip-azul    { background:rgba(61,106,255,.12); color:#7090ff; }
+    .chip-verde   { background:rgba(46,213,115,.12); color:var(--green); }
+    .chip-dorado  { background:rgba(245,200,66,.12); color:var(--gold); }
+    .chip-naranja { background:rgba(255,159,67,.12); color:var(--orange); }
+    .chip-gris    { background:rgba(136,146,164,.1); color:var(--muted); }
+    .tc-days { font-size:11px; color:var(--muted); flex-shrink:0; }
+    .tc-days.warn  { color:var(--gold); }
+    .tc-days.alert { color:var(--red); }
+    .tc-expand { color:var(--muted); font-size:16px; transition:transform .2s; flex-shrink:0; }
+    .ticket-card.expanded .tc-expand { transform:rotate(180deg); }
+
+    /* Expanded body */
+    .tc-body { display:none; border-top:1px solid var(--border); padding:16px; }
+    .ticket-card.expanded .tc-body { display:block; }
+
+    .fault-box {
+      background:var(--bg3); border-radius:8px; padding:12px 14px;
+      font-size:13px; line-height:1.6; margin-bottom:14px;
+    }
+    .fault-box .lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+
+    .eq-details { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .eq-detail .dl { font-size:11px; color:var(--muted); }
+    .eq-detail .dv { font-size:13px; font-weight:500; margin-top:1px; }
+
+    /* Actions within card */
+    .tc-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    select.sm { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:13px; padding:8px 28px 8px 10px; outline:none;
+      font-family:inherit; cursor:pointer; appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 8px center; flex:1; }
+    select option { background:var(--bg3); }
+    .btn-sm {
+      padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600;
+      border:none; cursor:pointer; font-family:inherit; transition:all .2s; white-space:nowrap;
+    }
+    .btn-primary { background:var(--accent); color:white; }
+    .btn-primary:hover { background:#5278ff; }
+    .btn-ghost { background:var(--bg3); border:1px solid var(--border); color:var(--muted); }
+    .btn-ghost:hover { color:var(--text); border-color:var(--muted); }
+    .btn-action-blue   { background:#3d6aff; color:#fff; }
+    .btn-action-blue:hover { background:#5278ff; }
+    .btn-action-green  { background:#2ed573; color:#1a1f2e; font-weight:700; }
+    .btn-action-green:hover { background:#3ee583; }
+    .btn-action-purple { background:#a29bfe; color:#1a1f2e; font-weight:700; }
+    .btn-action-purple:hover { background:#b5affe; }
+    /* ── Loading spinner ─────────────────────────────────── */
+    @keyframes _spin { to { transform: rotate(360deg); } }
+    .btn-spinner { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.35); border-top-color:currentColor; border-radius:50%; animation:_spin .7s linear infinite; vertical-align:middle; margin-right:7px; }
+    .btn-loading { opacity:.75 !important; cursor:not-allowed !important; pointer-events:none; }
+    /* Next-step banner */
+    .next-step { border-radius:10px; padding:10px 14px; margin-bottom:12px; display:flex; flex-direction:column; gap:8px; }
+    .next-step-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .next-step-blue   { background:rgba(61,106,255,.08);  border:1px solid rgba(61,106,255,.25); }
+    .next-step-green  { background:rgba(46,213,115,.07);  border:1px solid rgba(46,213,115,.25); }
+    .next-step-purple { background:rgba(162,155,254,.07); border:1px solid rgba(162,155,254,.25); }
+
+    textarea.sm {
+      width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:13px; padding:10px 12px; outline:none;
+      font-family:inherit; resize:vertical; min-height:65px; transition:border-color .2s;
+    }
+    textarea.sm:focus { border-color:var(--accent); }
+
+    .note-row { margin-bottom:10px; }
+    .note-existing { background:var(--bg3); border-left:3px solid var(--gold); border-radius:0 8px 8px 0;
+      padding:8px 12px; margin-bottom:6px; }
+    .note-existing p  { font-size:12px; line-height:1.5; }
+    .note-existing .nm { font-size:10px; color:var(--muted); margin-top:3px; }
+
+    /* ── Tech quote section ────────────────────────────────── */
+    .quote-section { margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+    .quote-section h4 { font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.4px; color:var(--muted); margin-bottom:10px; }
+    .quote-status-chip { display:inline-flex; align-items:center; gap:5px;
+      padding:3px 10px; border-radius:16px; font-size:11px; font-weight:700; }
+    .qsc-pendiente { background:rgba(245,200,66,.15); color:var(--gold); }
+    .qsc-aprobada  { background:rgba(46,213,115,.15); color:var(--green); }
+    .qsc-rechazada { background:rgba(255,71,87,.15); color:var(--red); }
+    .tq-build-row  { display:grid; grid-template-columns:1fr 55px 100px 32px; gap:6px; align-items:center; margin-bottom:6px; }
+    .tq-build-row input { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:12px; padding:7px 9px; outline:none; font-family:inherit; width:100%; }
+    .tq-build-row input:focus { border-color:var(--accent); }
+    .tq-del { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); width:32px; height:32px; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; font-size:13px; }
+    .tq-del:hover { color:var(--red); border-color:var(--red); }
+    .tq-total { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+      padding:8px 12px; display:flex; justify-content:space-between; align-items:center;
+      font-size:13px; margin:8px 0; }
+    .tq-total .tot { font-weight:800; color:var(--orange); font-family:'SF Mono','Fira Code',monospace; }
+    .tq-items-table { width:100%; font-size:12px; border-collapse:collapse; margin:8px 0; }
+    .tq-items-table td { padding:5px 6px; border-bottom:1px solid rgba(42,47,63,.5); }
+    .tq-items-table tr:last-child td { border-bottom:none; }
+    .tq-items-table .right { text-align:right; font-family:monospace; }
+    .tq-days { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:8px 0; }
+    .tq-days h5 { font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin:0 0 8px; }
+    .tq-days-grid { display:grid; grid-template-columns:1fr 70px; gap:5px 10px; align-items:center; font-size:12px; }
+    .tq-days-grid label { color:var(--muted); }
+    .tq-days-grid input { background:var(--bg3); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:5px 8px; text-align:center; width:100%; outline:none; }
+    .tq-days-grid input:focus { border-color:var(--accent); }
+    .tq-days-grid input.req-err { border-color:var(--red); }
+    .tq-days-total { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; font-size:12px; }
+    .tq-days-total span:last-child { font-weight:800; color:var(--accent); font-size:15px; font-family:monospace; }
+    .rejection-note { background:rgba(255,71,87,.08); border:1px solid rgba(255,71,87,.2);
+      border-radius:8px; padding:8px 12px; font-size:12px; color:var(--red); margin-top:6px; }
+
+    /* Empty state */
+    .empty { text-align:center; padding:60px 20px; }
+    .empty .ei { font-size:48px; margin-bottom:12px; }
+    .empty p { font-size:14px; color:var(--muted); }
+
+    .spinner { width:36px; height:36px; border:3px solid var(--border);
+      border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 12px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Filter */
+    .filter-row { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .filter-row select.sm { max-width:200px; }
+    .search-inp {
+      flex:1; min-width:160px; background:var(--bg2); border:1px solid var(--border);
+      border-radius:8px; color:var(--text); font-size:13px; padding:8px 14px;
+      outline:none; font-family:inherit;
+    }
+    .search-inp:focus { border-color:var(--accent); }
+
+    /* Toast */
+    .toast { position:fixed; bottom:20px; left:50%;
+      transform:translateX(-50%) translateY(80px);
+      background:var(--bg3); border:1px solid var(--border); border-radius:10px;
+      padding:10px 18px; font-size:13px; color:var(--green); transition:transform .3s;
+      pointer-events:none; z-index:200; white-space:nowrap; }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+
+    @media (max-width:500px) {
+      .stats-row { grid-template-columns:1fr 1fr 1fr; }
+      .eq-details { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🔧</div>
+    <div><h1>Focus Store</h1><p>Panel del Técnico</p></div>
+  </div>
+  <div class="topbar-spacer"></div>
+  <a href="../admin/precios.html" style="font-size:13px;color:var(--muted);text-decoration:none;margin-right:4px">💰 Catálogo</a>
+  <div class="user-chip" id="userChip">
+    <div class="user-av" id="userAv">?</div>
+    <span id="userName">—</span>
+  </div>
+  <button class="btn-logout" onclick="logout()" title="Salir">⏻</button>
+</div>
+
+<div class="page">
+
+  <!-- Privacy notice -->
+  <div class="privacy-notice">
+    <span class="ic">🔒</span>
+    <p>Vista técnica — los datos personales del cliente no están disponibles en esta vista.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat blue" id="statMy" onclick="filterView('mine')">
+      <div class="stat-n" id="statMyN">—</div>
+      <div class="stat-l">Mis tickets activos</div>
+    </div>
+    <div class="stat gold" id="statUnassigned" onclick="filterView('unassigned')">
+      <div class="stat-n" id="statUnN">—</div>
+      <div class="stat-l">Sin asignar</div>
+    </div>
+    <div class="stat green" id="statDiag" onclick="filterView('diag')">
+      <div class="stat-n" id="statDiagN">—</div>
+      <div class="stat-l">En diagnóstico</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row">
+    <input class="search-inp" type="text" id="searchInp" placeholder="🔍 Buscar por ticket, equipo…" oninput="applyFilter()">
+    <select class="sm" id="viewFilter" onchange="applyFilter()">
+      <option value="mine">Mis tickets</option>
+      <option value="unassigned">Sin asignar</option>
+      <option value="all">Todos los activos</option>
+      <option value="diag">En diagnóstico</option>
+    </select>
+  </div>
+
+  <!-- Ticket list -->
+  <div id="ticketList">
+    <div class="empty">
+      <div class="spinner"></div>
+      <p>Cargando tickets…</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATUS_MAP = {
+  equipo_recibido:      { label:'📬 Equipo recibido', chip:'chip-verde' },
+  en_diagnostico:       { label:'🔍 Diagnóstico',    chip:'chip-azul' },
+  esperando_aprobacion: { label:'⚡ Cotización',     chip:'chip-dorado' },
+  aprobado_reparacion:  { label:'✅ Aprobado',       chip:'chip-verde' },
+  esperando_repuesto:   { label:'📦 Repuesto',       chip:'chip-naranja' },
+  en_reparacion:        { label:'🔧 Reparando',      chip:'chip-azul' },
+  en_pruebas:           { label:'🧪 Pruebas',        chip:'chip-azul' },
+  listo_para_entrega:   { label:'🎉 Listo retiro',   chip:'chip-verde' },
+  solicitud_recibida:   { label:'📝 Solicitud',      chip:'chip-gris' },
+  equipo_en_camino:     { label:'🚚 En camino',      chip:'chip-dorado' }
+};
+
+const TECH_STATUSES = [
+  { v:'equipo_recibido',      l:'📬 Equipo recibido' },
+  { v:'en_diagnostico',       l:'🔍 En diagnóstico' },
+  { v:'esperando_aprobacion', l:'⚡ Esperando aprobación' },
+  { v:'aprobado_reparacion',  l:'✅ Reparación aprobada' },
+  { v:'esperando_repuesto',   l:'📦 Esperando repuesto' },
+  { v:'en_reparacion',        l:'🔧 En reparación' },
+  { v:'en_pruebas',           l:'🧪 En pruebas' },
+  { v:'listo_para_entrega',   l:'🎉 Listo para entrega' },
+  { v:'irreparable',          l:'⛔ No reparable' }
+];
+
+const CAT_ICONS = {camara:'📷',lente:'🔭',flash:'⚡',luz:'💡',audio:'🎙',gimbal:'🎬',drone:'🚁',computadora:'💻',monitor:'🖥',tripode:'📸',otro:'🔧'};
+
+let session    = null;
+let allTickets = [];
+let notesCache  = {};
+let quoteCache  = {};      // ticketId → quote object (or null)
+let techCatalog = null;    // loaded once
+let tqBuildItems = {};     // ticketId → [{desc,qty,price,catalogId}]
+
+window.addEventListener('DOMContentLoaded', async () => {
+  session = getSession();
+  if (!session) { location.href = '../login.html'; return; }
+
+  // Render user chip
+  const av = document.getElementById('userAv');
+  av.textContent      = session.avatar || session.full_name[0];
+  av.style.background = (session.color || '#3d6aff') + '33';
+  av.style.color      = session.color || '#3d6aff';
+  document.getElementById('userName').textContent = session.full_name.split(' ')[0];
+
+  await loadTickets();
+});
+
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) { localStorage.removeItem('sp_session'); return null; }
+    return s;
+  } catch (_) { return null; }
+}
+
+/* ── Load tickets (uses sp_ticket_tecnico_view — NO customer data) ── */
+async function loadTickets() {
+  try {
+    // Use the technician view (no customer personal data)
+    const { data, error } = await sb
+      .from('sp_ticket_tecnico_view')
+      .select('*')
+      .not('status', 'in', '(cerrado,entregado,cancelado,abandonado,irreparable)')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    allTickets = data || [];
+
+    updateStats();
+    applyFilter();
+
+  } catch (ex) {
+    console.error(ex);
+    document.getElementById('ticketList').innerHTML =
+      `<div class="empty"><p>⚠️ Error al cargar. <a href="#" onclick="loadTickets()" style="color:var(--accent)">Reintentar</a></p></div>`;
+  }
+}
+
+function updateStats() {
+  const mine       = allTickets.filter(t => t.assigned_to === session.id).length;
+  const unassigned = allTickets.filter(t => !t.assigned_to).length;
+  const diag       = allTickets.filter(t => t.status === 'en_diagnostico').length;
+  document.getElementById('statMyN').textContent   = mine;
+  document.getElementById('statUnN').textContent   = unassigned;
+  document.getElementById('statDiagN').textContent = diag;
+}
+
+function filterView(v) {
+  document.getElementById('viewFilter').value = v;
+  applyFilter();
+}
+
+function applyFilter() {
+  const view   = document.getElementById('viewFilter').value;
+  const search = document.getElementById('searchInp').value.toLowerCase();
+
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active'));
+  if (view === 'mine')       document.getElementById('statMy').classList.add('active');
+  if (view === 'unassigned') document.getElementById('statUnassigned').classList.add('active');
+  if (view === 'diag')       document.getElementById('statDiag').classList.add('active');
+
+  let filtered = allTickets;
+
+  if (view === 'mine')       filtered = filtered.filter(t => t.assigned_to === session.id);
+  if (view === 'unassigned') filtered = filtered.filter(t => !t.assigned_to);
+  if (view === 'diag')       filtered = filtered.filter(t => t.status === 'en_diagnostico');
+
+  if (search) {
+    filtered = filtered.filter(t =>
+      t.ticket_number.toLowerCase().includes(search) ||
+      `${t.brand} ${t.model}`.toLowerCase().includes(search) ||
+      t.category?.includes(search)
+    );
+  }
+
+  renderTickets(filtered);
+}
+
+function renderTickets(tickets) {
+  const list = document.getElementById('ticketList');
+  if (!tickets.length) {
+    list.innerHTML = `<div class="empty"><div class="ei">🔧</div><p>No hay tickets que coincidan.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = tickets.map(t => {
+    const st   = STATUS_MAP[t.status] || { label: t.status, chip:'chip-gris' };
+    const days = Math.floor((Date.now() - new Date(t.created_at)) / 86400000);
+    const dc   = days > 20 ? 'alert' : days > 10 ? 'warn' : '';
+
+    const statusOpts = TECH_STATUSES.map(s =>
+      `<option value="${s.v}" ${s.v === t.status ? 'selected' : ''}>${s.l}</option>`
+    ).join('');
+
+    return `
+    <div class="ticket-card" id="tc-${t.id}">
+      <div class="tc-header" onclick="toggleCard('${t.id}')">
+        <div class="tc-num">${t.ticket_number}</div>
+        <div class="tc-equip">
+          <h4>${CAT_ICONS[t.category]||'🔧'} ${t.brand} ${t.model}</h4>
+          <p>${t.category || '—'} ${t.serial_number ? '· SN: ' + t.serial_number : ''}</p>
+        </div>
+        <div class="tc-status"><span class="chip ${st.chip}">${st.label}</span></div>
+        <div class="tc-days ${dc}">${days}d</div>
+        <div class="tc-expand">▼</div>
+      </div>
+
+      <div class="tc-body" id="body-${t.id}">
+
+        <!-- Equipment details -->
+        <div class="eq-details">
+          <div class="eq-detail"><div class="dl">Categoría</div><div class="dv">${t.category||'—'}</div></div>
+          <div class="eq-detail"><div class="dl">Condición</div><div class="dv">${t.physical_condition||'—'}</div></div>
+          ${t.serial_number ? `<div class="eq-detail"><div class="dl">N° de serie</div><div class="dv" style="font-family:monospace">${t.serial_number}</div></div>` : ''}
+          ${t.accessories?.length ? `<div class="eq-detail" style="grid-column:1/-1"><div class="dl">Accesorios</div><div class="dv" style="font-size:12px">${t.accessories.join(', ')}</div></div>` : ''}
+          ${t.accessories_notes ? `<div class="eq-detail" style="grid-column:1/-1"><div class="dl">Notas de accesorios</div><div class="dv" style="font-size:12px;color:var(--muted)">${t.accessories_notes}</div></div>` : ''}
+        </div>
+
+        <!-- Fault reported -->
+        <div class="fault-box">
+          <div class="lbl">Falla reportada</div>
+          ${esc(t.reported_fault)}
+        </div>
+        ${t.client_notes ? `<div class="fault-box" style="border-left:3px solid var(--accent)"><div class="lbl">Notas del cliente</div>${esc(t.client_notes)}</div>` : ''}
+
+        <!-- Next-step action buttons -->
+        ${t.status === 'aprobado_reparacion' ? `
+        <div class="next-step next-step-blue">
+          <div class="next-step-lbl">✅ Cotización aprobada — ¿Listo para iniciar?</div>
+          <button class="btn-sm btn-action-blue" onclick="openActModal('repair','${t.id}')">▶️ Iniciar reparación</button>
+        </div>` : ''}
+        ${t.status === 'en_reparacion' ? `
+        <div class="next-step next-step-green">
+          <div class="next-step-lbl">🔧 En reparación — ¿Lista para pruebas?</div>
+          <button class="btn-sm btn-action-green" onclick="openActModal('testing','${t.id}')">✅ Reparación lista → Pruebas</button>
+        </div>` : ''}
+        ${t.status === 'en_pruebas' ? `
+        <div class="next-step next-step-purple">
+          <div class="next-step-lbl">🧪 En pruebas — ¿Todo correcto?</div>
+          <button class="btn-sm btn-action-purple" onclick="openActModal('ready','${t.id}')">🎉 Pruebas OK → Listo para entrega</button>
+        </div>` : ''}
+
+        <!-- Change status (manual override) -->
+        <div class="tc-actions">
+          <select class="sm" id="st-${t.id}">${statusOpts}</select>
+          <button class="btn-sm btn-primary" onclick="changeStatus('${t.id}','${t.status}')">Actualizar estado</button>
+          ${!t.assigned_to || t.assigned_to !== session.id
+            ? `<button class="btn-sm btn-ghost" onclick="takeTicket('${t.id}')">📌 Tomar ticket</button>` : ''}
+        </div>
+
+        <!-- Technical note -->
+        <div class="note-row">
+          <div id="notes-${t.id}" style="margin-bottom:8px"></div>
+          <textarea class="sm" id="note-${t.id}" placeholder="Notas técnicas del diagnóstico o reparación…" rows="2"></textarea>
+          <div style="margin-top:6px">
+            <button class="btn-sm btn-ghost" onclick="addNote('${t.id}')">+ Agregar nota técnica</button>
+          </div>
+        </div>
+
+        <!-- Tech quote section -->
+        <div class="quote-section">
+          <h4>🧾 Mi cotización a Focus Store</h4>
+          <div id="tq-${t.id}"><p style="font-size:12px;color:var(--muted)">Cargando…</p></div>
+        </div>
+
+      </div>
+    </div>`;
+  }).join('');
+
+  // Load notes for expanded cards (pre-load none, load on expand)
+}
+
+function toggleCard(id) {
+  const card = document.getElementById(`tc-${id}`);
+  const wasOpen = card.classList.contains('expanded');
+  card.classList.toggle('expanded');
+  if (!wasOpen) {
+    loadNotes(id);
+    loadQuoteForCard(id);
+  }
+}
+
+async function loadNotes(ticketId) {
+  if (notesCache[ticketId]) { renderNotes(ticketId, notesCache[ticketId]); return; }
+  try {
+    const { data } = await sb.from('sp_ticket_internal_notes')
+      .select('content,created_at,note_type')
+      .eq('ticket_id', ticketId)
+      .eq('note_type', 'tecnico')
+      .order('created_at');
+    notesCache[ticketId] = data || [];
+    renderNotes(ticketId, data || []);
+  } catch (_) {}
+}
+
+function renderNotes(ticketId, notes) {
+  const el = document.getElementById(`notes-${ticketId}`);
+  if (!el) return;
+  el.innerHTML = notes.map(n => `
+    <div class="note-existing">
+      <p>${esc(n.content)}</p>
+      <div class="nm">🔧 Técnico · ${fmtDT(n.created_at)}</div>
+    </div>`).join('');
+}
+
+/* ── Actions ────────────────────────────────────────────────── */
+async function changeStatus(ticketId, currentStatus) {
+  const newStatus = document.getElementById(`st-${ticketId}`).value;
+  if (!newStatus || newStatus === currentStatus) { showToast('⚠️ Seleccione un estado diferente.'); return; }
+
+  try {
+    const { error } = await sb.from('sp_tickets').update({ status: newStatus }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Estado actualizado');
+    setTimeout(() => loadTickets(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function takeTicket(ticketId) {
+  try {
+    const t = allTickets.find(x => x.id === ticketId);
+    const earlyStatuses = ['solicitud_recibida', 'equipo_en_camino', 'equipo_recibido'];
+    const autoDiag = t && earlyStatuses.includes(t.status);
+
+    const payload = { assigned_to: session.id };
+    if (autoDiag) payload.status = 'en_diagnostico';
+
+    const { error } = await sb.from('sp_tickets').update(payload).eq('id', ticketId);
+    if (error) throw error;
+
+    showToast(autoDiag ? '🔍 Ticket tomado — iniciando diagnóstico' : '✅ Ticket asignado a ti');
+    setTimeout(() => loadTickets(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function addNote(ticketId) {
+  const content = document.getElementById(`note-${ticketId}`)?.value?.trim();
+  if (!content) { showToast('⚠️ Escriba la nota.'); return; }
+
+  try {
+    const { error } = await sb.from('sp_ticket_internal_notes').insert({
+      ticket_id: ticketId, note_type: 'tecnico',
+      author_id: session.id, content
+    });
+    if (error) throw error;
+    document.getElementById(`note-${ticketId}`).value = '';
+    delete notesCache[ticketId];
+    await loadNotes(ticketId);
+    showToast('✅ Nota guardada');
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Tech Quote ─────────────────────────────────────────────── */
+async function ensureCatalog() {
+  if (techCatalog) return;
+  const { data } = await sb.from('sp_price_catalog')
+    .select('id,name,category,unit_price_tecnico').eq('is_active',true).order('category').order('name');
+  techCatalog = data || [];
+}
+
+async function loadQuoteForCard(ticketId) {
+  const el = document.getElementById(`tq-${ticketId}`);
+  if (!el) return;
+  if (ticketId in quoteCache) { renderTechQuote(ticketId); return; }
+
+  await ensureCatalog();
+  try {
+    const { data } = await sb.from('sp_repair_quotes')
+      .select('*, sp_quote_items(*)')
+      .eq('ticket_id', ticketId)
+      .eq('quote_type', 'interna')
+      .maybeSingle();
+    quoteCache[ticketId] = data || null;
+    renderTechQuote(ticketId);
+  } catch (_) {
+    if (el) el.innerHTML = `<p style="font-size:12px;color:var(--red)">Error al cargar cotización.</p>`;
+  }
+}
+
+function renderTechQuote(ticketId) {
+  const el = document.getElementById(`tq-${ticketId}`);
+  if (!el) return;
+  const q = quoteCache[ticketId];
+
+  if (!q) {
+    // No quote yet — show builder
+    if (!tqBuildItems[ticketId]) tqBuildItems[ticketId] = [];
+    el.innerHTML = tqBuilderHTML(ticketId);
+    renderTqRows(ticketId);
+    return;
+  }
+
+  // Quote exists — show read-only with status
+  const items = q.sp_quote_items || [];
+  const statusMap = { pendiente:'⏳ Enviada — pendiente', aprobada:'✅ Aprobada por Focus Store', rechazada:'✗ Rechazada' };
+  const statusCls = { pendiente:'qsc-pendiente', aprobada:'qsc-aprobada', rechazada:'qsc-rechazada' };
+  const sub = parseFloat(q.subtotal)||0;
+  const tot = parseFloat(q.total)||0;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span class="quote-status-chip ${statusCls[q.status]||''}">${statusMap[q.status]||q.status}</span>
+      <span style="font-size:10px;color:var(--muted)">${new Date(q.created_at).toLocaleDateString('es-HN',{day:'2-digit',month:'short'})}</span>
+    </div>
+    <table class="tq-items-table">
+      <tbody>
+        ${items.sort((a,b)=>a.sort_order-b.sort_order).map(it=>`
+          <tr>
+            <td>${esc(it.description)}</td>
+            <td class="right">×${it.quantity}</td>
+            <td class="right">L ${fmtN(it.unit_price)}</td>
+            <td class="right" style="color:var(--orange)">L ${fmtN(it.total_price)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="tq-total">
+      <span>Total cotizado</span>
+      <span class="tot">L ${fmtN(tot)}</span>
+    </div>
+    ${(q.repair_days || q.testing_days) ? `
+    <div class="tq-days" style="margin-top:8px">
+      <h5>📅 Días estimados de trabajo</h5>
+      <div class="tq-days-grid">
+        <label>🔧 Reparación</label><span style="text-align:center;font-weight:700">${q.repair_days||0} día(s)</span>
+        ${q.parts_days > 0 ? `<label>📦 Repuesto</label><span style="text-align:center;font-weight:700">${q.parts_days} día(s)</span>` : ''}
+        <label>🧪 Pruebas</label><span style="text-align:center;font-weight:700">${q.testing_days||0} día(s)</span>
+        <div class="tq-days-total">
+          <span>⏱️ Total estimado</span>
+          <span>${(q.repair_days||0)+(q.parts_days||0)+(q.testing_days||0)} día(s)</span>
+        </div>
+      </div>
+    </div>` : ''}
+    ${q.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">📝 ${esc(q.notes)}</div>` : ''}
+    ${q.status === 'rechazada' && q.rejection_reason
+      ? `<div class="rejection-note">Motivo de rechazo: ${esc(q.rejection_reason)}<br>
+         <button class="btn-sm btn-ghost" style="margin-top:8px;font-size:12px" onclick="resetTechQuote('${ticketId}')">
+           Crear nueva cotización
+         </button></div>` : ''}`;
+}
+
+function tqBuilderHTML(tid) {
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--muted)">Ingrese lo que cobrará a Focus Store:</span>
+      <button class="btn-sm btn-ghost" style="font-size:11px;padding:4px 10px" onclick="openTechCatModal('${tid}')">
+        📦 Del catálogo
+      </button>
+    </div>
+    <div id="tqrows-${tid}"></div>
+    <button class="btn-sm btn-ghost" style="width:100%;font-size:12px;margin-bottom:8px" onclick="addTqRow('${tid}')">
+      ＋ Agregar línea manual
+    </button>
+    <div class="tq-total">
+      <span>Total</span><span class="tot" id="tqtot-${tid}">L 0.00</span>
+    </div>
+    <div class="tq-days">
+      <h5>📅 Días estimados de trabajo <span style="color:var(--red)">*obligatorio</span></h5>
+      <div class="tq-days-grid">
+        <label>🔧 Días de reparación *</label>
+        <input type="number" id="tqRepairDays-${tid}" min="1" max="90" placeholder="Ej: 3"
+               oninput="recalcTqDays('${tid}')">
+        <label>📦 Días para repuesto <span style="font-size:10px">(0 si no necesita)</span></label>
+        <input type="number" id="tqPartsDays-${tid}" min="0" max="90" value="0"
+               oninput="recalcTqDays('${tid}')">
+        <label>🧪 Días de pruebas *</label>
+        <input type="number" id="tqTestingDays-${tid}" min="1" max="30" placeholder="Ej: 1"
+               oninput="recalcTqDays('${tid}')">
+        <div class="tq-days-total">
+          <span>⏱️ Total días estimados</span>
+          <span id="tqTotalDays-${tid}">— días</span>
+        </div>
+      </div>
+    </div>
+    <textarea class="sm" id="tqnote-${tid}" placeholder="Nota interna para Focus Store (opcional)…" rows="1" style="margin-bottom:8px"></textarea>
+    <button class="btn-sm btn-primary" style="width:100%" onclick="submitTechQuote('${tid}',this)">
+      📤 Enviar cotización
+    </button>`;
+}
+
+function renderTqRows(tid) {
+  const rows = tqBuildItems[tid] || [];
+  const el = document.getElementById(`tqrows-${tid}`);
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = `<p style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0">Sin líneas aún.</p>`;
+    recalcTq(tid); return;
+  }
+  el.innerHTML = rows.map((r,i) => `
+    <div class="tq-build-row">
+      <input type="text" value="${esc(r.desc)}" placeholder="Descripción…"
+             oninput="tqBuildItems['${tid}'][${i}].desc=this.value">
+      <input type="number" value="${r.qty}" min="1" step="1"
+             oninput="tqBuildItems['${tid}'][${i}].qty=parseFloat(this.value)||1;recalcTq('${tid}')">
+      <input type="number" value="${r.price}" min="0" step="0.01" placeholder="L 0.00"
+             oninput="tqBuildItems['${tid}'][${i}].price=parseFloat(this.value)||0;recalcTq('${tid}')">
+      <button class="tq-del" onclick="removeTqRow('${tid}',${i})">🗑</button>
+    </div>`).join('');
+  recalcTq(tid);
+}
+
+function addTqRow(tid) {
+  if (!tqBuildItems[tid]) tqBuildItems[tid] = [];
+  tqBuildItems[tid].push({ desc:'', cat:'servicio', qty:1, price:0, catalogId:null });
+  renderTqRows(tid);
+}
+
+function removeTqRow(tid, i) {
+  tqBuildItems[tid].splice(i, 1);
+  renderTqRows(tid);
+}
+
+function recalcTq(tid) {
+  const tot = (tqBuildItems[tid]||[]).reduce((s,r)=>s+(r.qty*r.price),0);
+  const el = document.getElementById(`tqtot-${tid}`);
+  if (el) el.textContent = 'L ' + fmtN(tot);
+}
+
+function recalcTqDays(tid) {
+  const repair  = parseInt(document.getElementById(`tqRepairDays-${tid}`)?.value)  || 0;
+  const parts   = parseInt(document.getElementById(`tqPartsDays-${tid}`)?.value)   || 0;
+  const testing = parseInt(document.getElementById(`tqTestingDays-${tid}`)?.value) || 0;
+  const total   = repair + parts + testing;
+  const el = document.getElementById(`tqTotalDays-${tid}`);
+  if (el) el.textContent = total > 0 ? `${total} día(s)` : '— días';
+}
+
+async function submitTechQuote(ticketId, btn) {
+  const restore = btnLoad(btn, 'Enviando…');
+  const rows = tqBuildItems[ticketId] || [];
+  if (!rows.length) { showToast('⚠️ Agregue al menos una línea'); return; }
+  if (rows.some(r => !r.desc.trim() || r.price <= 0)) {
+    showToast('⚠️ Complete todas las líneas'); return;
+  }
+
+  // Validar días obligatorios
+  const repairDays  = parseInt(document.getElementById(`tqRepairDays-${ticketId}`)?.value)  || 0;
+  const partsDays   = parseInt(document.getElementById(`tqPartsDays-${ticketId}`)?.value)   || 0;
+  const testingDays = parseInt(document.getElementById(`tqTestingDays-${ticketId}`)?.value) || 0;
+
+  if (repairDays < 1) {
+    document.getElementById(`tqRepairDays-${ticketId}`)?.classList.add('req-err');
+    showToast('⚠️ Ingrese los días estimados de reparación'); return;
+  }
+  if (testingDays < 1) {
+    document.getElementById(`tqTestingDays-${ticketId}`)?.classList.add('req-err');
+    showToast('⚠️ Ingrese los días estimados de pruebas'); return;
+  }
+
+  const sub  = rows.reduce((s,r)=>s+(r.qty*r.price),0);
+  const note = document.getElementById(`tqnote-${ticketId}`)?.value.trim() || null;
+
+  try {
+    const { data: q, error: qErr } = await sb.from('sp_repair_quotes').insert({
+      ticket_id: ticketId, quote_type: 'interna',
+      created_by: session.id, status: 'pendiente',
+      subtotal: sub, tax_rate: 0, tax_amount: 0, total: sub, notes: note,
+      repair_days: repairDays, parts_days: partsDays, testing_days: testingDays
+    }).select('id').single();
+    if (qErr) throw qErr;
+
+    await sb.from('sp_quote_items').insert(rows.map((r,i)=>({
+      quote_id: q.id, description: r.desc, item_category: r.cat,
+      quantity: r.qty, unit_price: r.price, total_price: r.qty*r.price,
+      sort_order: i, catalog_item_id: r.catalogId || null
+    })));
+
+    // Cambiar estado del ticket a "esperando aprobación" automáticamente
+    await sb.from('sp_tickets')
+      .update({ status: 'esperando_aprobacion' })
+      .eq('id', ticketId);
+
+    // Notificar a admin/supervisor via notify-admin-quote
+    try {
+      const t = allTickets.find(x => x.id === ticketId);
+      const totalDays = repairDays + partsDays + testingDays;
+      await fetch(`${SUPABASE_URL}/functions/v1/notify-admin-quote`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId,
+          ticketNumber: t?.ticket_number || '',
+          techName: session.full_name,
+          brand: t?.brand || '',
+          model: t?.model || '',
+          total: sub,
+          totalDays
+        })
+      });
+    } catch(_) { /* notificación silenciosa */ }
+
+    delete quoteCache[ticketId];
+    tqBuildItems[ticketId] = [];
+    await loadQuoteForCard(ticketId);
+    showToast('✅ Cotización enviada a Focus Store');
+  } catch (ex) { restore?.(); showToast('⚠️ Error: ' + ex.message); }
+}
+
+function resetTechQuote(ticketId) {
+  quoteCache[ticketId] = null;
+  tqBuildItems[ticketId] = [];
+  const el = document.getElementById(`tq-${ticketId}`);
+  if (el) { el.innerHTML = tqBuilderHTML(ticketId); renderTqRows(ticketId); }
+}
+
+/* ── Tech catalog modal (inline, simplified) ────────────────── */
+let techCatTarget = null;
+
+function openTechCatModal(tid) {
+  techCatTarget = tid;
+  let overlay = document.getElementById('techCatOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'techCatOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,12,16,.85);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.style.display='none'; };
+    overlay.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:480px;max-height:80vh;display:flex;flex-direction:column">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center">
+          <b style="flex:1">📦 Catálogo de precios</b>
+          <input id="techCatSearch" type="text" placeholder="Buscar…"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit"
+            oninput="renderTechCatList()">
+          <button onclick="document.getElementById('techCatOverlay').style.display='none'"
+            style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+        </div>
+        <div id="techCatList" style="flex:1;overflow-y:auto;padding:8px"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  document.getElementById('techCatSearch').value = '';
+  renderTechCatList();
+}
+
+function renderTechCatList() {
+  const q = (document.getElementById('techCatSearch')?.value||'').toLowerCase();
+  const items = (techCatalog||[]).filter(i => !q || i.name.toLowerCase().includes(q));
+  const el = document.getElementById('techCatList');
+  if (!el) return;
+  if (!items.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Sin resultados</p>'; return; }
+  const CAT = {mano_de_obra:'Mano de obra',repuesto:'Repuesto',diagnostico:'Diagnóstico',servicio:'Servicio',otro:'Otro'};
+  el.innerHTML = items.map(i => `
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .15s"
+         onmouseover="this.style.background='rgba(61,106,255,.07)'" onmouseout="this.style.background=''"
+         onclick="addFromTechCatalog('${i.id}')">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${esc(i.name)}</div>
+        <div style="font-size:10px;color:var(--muted)">${CAT[i.category]||i.category}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--orange)">L ${fmtN(i.unit_price_tecnico)}</div>
+    </div>`).join('');
+}
+
+function addFromTechCatalog(catId) {
+  const item = (techCatalog||[]).find(i=>i.id===catId);
+  if (!item || !techCatTarget) return;
+  if (!tqBuildItems[techCatTarget]) tqBuildItems[techCatTarget] = [];
+  tqBuildItems[techCatTarget].push({
+    desc: item.name, cat: item.category, qty: 1,
+    price: parseFloat(item.unit_price_tecnico)||0, catalogId: item.id
+  });
+  document.getElementById('techCatOverlay').style.display = 'none';
+  renderTqRows(techCatTarget);
+}
+
+function fmtN(n) { return Number(n).toLocaleString('es-HN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function logout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  localStorage.removeItem('sp_session');
+  location.href = '../login.html';
+}
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function esc(s) { return s?.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || ''; }
+function fmtDT(iso) { return new Date(iso).toLocaleString('es-HN',{ day:'numeric',month:'short',hour:'2-digit',minute:'2-digit' }); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+/* ═══════════════════════════════════════════════════════════════
+   ACTION MODAL — Botones de avance de estado
+═══════════════════════════════════════════════════════════════ */
+let _actAction = null, _actTicketId = null;
+
+function openActModal(action, ticketId) {
+  _actAction   = action;
+  _actTicketId = ticketId;
+  const t = allTickets.find(x => x.id === ticketId);
+  if (!t) return;
+
+  const configs = {
+    repair:  { title: '▶️ Iniciar reparación',         desc: `Ticket #${t.ticket_number} — ${t.brand} ${t.model}`, showDays: true,  confirmLabel: 'Iniciar reparación',      color: '#3d6aff', textColor: '#fff' },
+    testing: { title: '✅ Reparación lista → Pruebas', desc: `Ticket #${t.ticket_number} — ${t.brand} ${t.model}`, showDays: true,  confirmLabel: 'Pasar a pruebas',         color: '#2ed573', textColor: '#1a1f2e' },
+    ready:   { title: '🎉 Listo para entrega',         desc: `Ticket #${t.ticket_number} — ${t.brand} ${t.model}\n\nEl cliente recibirá notificación para recoger su equipo.`, showDays: false, confirmLabel: 'Confirmar', color: '#a29bfe', textColor: '#1a1f2e' }
+  };
+  const cfg = configs[action];
+  document.getElementById('actModalTitle').textContent   = cfg.title;
+  document.getElementById('actModalDesc').textContent    = cfg.desc;
+  document.getElementById('actModalDaysRow').style.display = cfg.showDays ? 'block' : 'none';
+  document.getElementById('actModalDays').value          = '';
+  const btn = document.getElementById('actModalConfirmBtn');
+  btn.textContent       = cfg.confirmLabel;
+  btn.style.background  = cfg.color;
+  btn.style.color       = cfg.textColor;
+  document.getElementById('actModalOverlay').style.display = 'flex';
+  if (cfg.showDays) document.getElementById('actModalDays').focus();
+}
+
+function closeActModal() {
+  document.getElementById('actModalOverlay').style.display = 'none';
+  _actAction = _actTicketId = null;
+}
+
+async function confirmActModal() {
+  const confirmBtn = document.getElementById('actModalConfirmBtn');
+  const restoreBtn = btnLoad(confirmBtn, 'Procesando…');
+  const action    = _actAction;
+  const ticketId  = _actTicketId;
+  const t = allTickets.find(x => x.id === ticketId);
+  if (!t) return;
+
+  let days = 0;
+  if (action !== 'ready') {
+    days = parseInt(document.getElementById('actModalDays').value);
+    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados'); return; }
+  }
+
+  closeActModal();
+
+  const d = new Date(); d.setDate(d.getDate() + days);
+  const expectedAt = d.toISOString().split('T')[0];
+  const dateStr    = days > 0
+    ? new Date(expectedAt + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' })
+    : '';
+
+  const statusMap = { repair: 'en_reparacion', testing: 'en_pruebas', ready: 'listo_para_entrega' };
+  const newStatus = statusMap[action];
+  const updatePayload = { status: newStatus };
+  if (action === 'repair')  updatePayload.repair_expected_at  = expectedAt;
+  if (action === 'testing') updatePayload.testing_expected_at = expectedAt;
+
+  try {
+    const { error } = await sb.from('sp_tickets').update(updatePayload).eq('id', ticketId);
+    if (error) throw error;
+
+    // Fetch customer + token for notifications (sin mostrar datos al tech)
+    const { data: tkt } = await sb.from('sp_tickets')
+      .select('access_token, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+      .eq('id', ticketId).single();
+    const cu    = tkt?.sp_customers;
+    const token = tkt?.access_token;
+    const brand = t.brand || '';
+    const model = t.model || '';
+
+    // Email al cliente
+    if (cu?.email && token) {
+      try {
+        const emailPayload = {
+          type: action === 'repair' ? 'repair_started' : action === 'testing' ? 'testing_started' : 'ready_for_pickup',
+          clientName: cu.full_name, clientEmail: cu.email,
+          ticketNumber: t.ticket_number, deviceBrand: brand, deviceModel: model,
+          portalToken: token
+        };
+        if (action === 'repair')  { emailPayload.repairDays  = days; emailPayload.repairExpectedDate  = dateStr; }
+        if (action === 'testing') { emailPayload.testingDays = days; emailPayload.testingExpectedDate = dateStr; }
+        await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailPayload)
+        });
+      } catch(_) {}
+    }
+
+    // WhatsApp al cliente
+    if (cu?.phone) {
+      let waMsg = '';
+      const name = cu.full_name || '';
+      const equip = `${brand} ${model}`.trim();
+      if (action === 'repair')  waMsg = `🔧 *Focus Store Soporte*\n\n¡Buenas noticias, ${name}! Tu equipo *${equip}* ya está en reparación.\n\n🎫 Ticket: #${t.ticket_number}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando esté listo. 🙏`;
+      if (action === 'testing') waMsg = `🧪 *Focus Store Soporte*\n\n¡Casi listo, ${name}! Tu *${equip}* está en fase de pruebas.\n\n🎫 Ticket: #${t.ticket_number}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando puedas venir a recogerlo. 🙏`;
+      if (action === 'ready')   waMsg = `✅ *¡Tu equipo está listo!*\n\nHola ${name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t.ticket_number}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`;
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: cu.phone, message: waMsg })
+        });
+      } catch(_) {}
+    }
+
+    showToast('✅ Estado actualizado — cliente notificado');
+    setTimeout(() => loadTickets(), 800);
+  } catch (ex) { restoreBtn?.(); showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── btnLoad ─────────────────────────────────────────────── */
+function btnLoad(btn, text) {
+  if (!btn) return () => {};
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.innerHTML = `<span class="btn-spinner"></span>${text || 'Procesando…'}`;
+  return function() { btn.disabled = false; btn.classList.remove('btn-loading'); btn.innerHTML = origHTML; };
+}
+
+// ── Anti-cache ────────────────────────────────────────────────
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true); });
+(function(){ var t=0; document.addEventListener('visibilitychange', function(){
+  if (document.hidden) { t=Date.now(); } else if (t && Date.now()-t>90000) location.reload(true);
+}); })();
+</script>
+<!-- ── Action Modal ─────────────────────────────────────────── -->
+<div id="actModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:340px;max-width:92vw">
+    <h3 id="actModalTitle" style="font-size:17px;margin-bottom:6px"></h3>
+    <p  id="actModalDesc"  style="font-size:12px;color:var(--muted);margin-bottom:18px;white-space:pre-line"></p>
+    <div id="actModalDaysRow">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Días estimados *</label>
+      <input type="number" id="actModalDays" min="1" max="90" placeholder="Ej: 3"
+             style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:20px;padding:12px;margin-top:8px;outline:none;text-align:center;font-family:inherit"
+             onkeydown="if(event.key==='Enter')confirmActModal()">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-sm btn-ghost" style="flex:1" onclick="closeActModal()">Cancelar</button>
+      <button class="btn-sm" id="actModalConfirmBtn" style="flex:1" onclick="confirmActModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

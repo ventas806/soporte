@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de Precios · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#0a0c10; --bg2:#12161f; --bg3:#1a1f2e;
+      --border:#2a2f3f; --text:#e8eaf0; --muted:#8892a4;
+      --accent:#3d6aff; --green:#2ed573; --red:#ff4757;
+      --gold:#f5c842; --orange:#ff9f43;
+    }
+    body { background:var(--bg); color:var(--text);
+      font-family:-apple-system, BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      min-height:100vh; }
+
+    /* Layout */
+    .layout { display:flex; min-height:100vh; }
+
+    /* Sidebar */
+    .sidebar { width:220px; background:var(--bg2); border-right:1px solid var(--border);
+      display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:30; }
+    .sidebar-brand { padding:18px 16px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:10px; }
+    .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,var(--accent),#6a3dff);
+      border-radius:8px; display:flex; align-items:center; justify-content:center;
+      font-size:17px; flex-shrink:0; }
+    .brand-name { font-size:14px; font-weight:700; }
+    .brand-sub  { font-size:10px; color:var(--muted); }
+    .nav { flex:1; padding:10px 0; overflow-y:auto; }
+    .nav-section { padding:6px 14px 4px; font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.5px; color:var(--muted); margin-top:6px; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:8px;
+      margin:1px 6px; font-size:13px; font-weight:500; color:var(--muted); cursor:pointer;
+      text-decoration:none; transition:all .2s; }
+    .nav-item:hover  { background:var(--bg3); color:var(--text); }
+    .nav-item.active { background:rgba(245,200,66,.12); color:var(--gold); }
+    .nav-item .ni    { font-size:16px; width:20px; text-align:center; flex-shrink:0; }
+    .sidebar-user { padding:14px; border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:10px; }
+    .user-av { width:34px; height:34px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:700; flex-shrink:0; }
+    .user-info-sb { flex:1; min-width:0; }
+    .user-info-sb h4 { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .user-info-sb p  { font-size:10px; color:var(--muted); }
+    .logout-btn { color:var(--muted); font-size:16px; cursor:pointer; padding:4px;
+      border-radius:6px; transition:color .2s; background:none; border:none; }
+    .logout-btn:hover { color:var(--red); }
+
+    /* Main */
+    .main { flex:1; margin-left:220px; min-height:100vh; display:flex; flex-direction:column; }
+    .topbar { background:var(--bg2); border-bottom:1px solid var(--border);
+      padding:14px 24px; display:flex; align-items:center; gap:12px;
+      position:sticky; top:0; z-index:20; }
+    .topbar h2 { font-size:17px; font-weight:700; flex:1; }
+    .btn-primary { background:var(--accent); color:white; border:none; border-radius:10px;
+      padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer;
+      font-family:inherit; transition:all .2s; display:flex; align-items:center; gap:6px; }
+    .btn-primary:hover { background:#5278ff; }
+    .page-body { padding:20px 24px; }
+
+    /* Category tabs */
+    .cat-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+    .cat-tab { padding:7px 16px; border-radius:20px; font-size:12px; font-weight:600;
+      cursor:pointer; border:1.5px solid var(--border); color:var(--muted);
+      background:transparent; font-family:inherit; transition:all .2s; }
+    .cat-tab:hover { border-color:var(--accent); color:var(--accent); }
+    .cat-tab.active { background:var(--accent); border-color:var(--accent); color:white; }
+
+    /* Price table */
+    .price-table-wrap { background:var(--bg2); border:1px solid var(--border);
+      border-radius:14px; overflow:hidden; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { padding:11px 16px; text-align:left; font-size:11px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
+      border-bottom:1px solid var(--border); background:var(--bg3); }
+    thead th.right { text-align:right; }
+    tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+    tbody tr:last-child { border-bottom:none; }
+    tbody tr:hover { background:rgba(255,255,255,.02); }
+    td { padding:12px 16px; font-size:13px; vertical-align:middle; }
+    td.right { text-align:right; }
+    td.mono { font-family:'SF Mono','Fira Code',monospace; }
+
+    .cat-badge { display:inline-block; padding:3px 10px; border-radius:10px;
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+    .cat-mano_de_obra { background:rgba(61,106,255,.15);  color:#7090ff; }
+    .cat-repuesto     { background:rgba(255,159,67,.15);  color:var(--orange); }
+    .cat-diagnostico  { background:rgba(245,200,66,.15);  color:var(--gold); }
+    .cat-servicio     { background:rgba(46,213,115,.15);  color:var(--green); }
+    .cat-otro         { background:rgba(136,146,164,.15); color:var(--muted); }
+
+    .price-tecnico { color:var(--orange); font-weight:700; }
+    .price-cliente { color:var(--green); font-weight:700; }
+
+    .row-actions { display:flex; gap:6px; justify-content:flex-end; }
+    .btn-icon { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); font-size:14px; width:32px; height:32px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .btn-icon:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-icon.danger:hover { border-color:var(--red); color:var(--red); }
+
+    .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+    .status-dot.on  { background:var(--green); }
+    .status-dot.off { background:var(--border); }
+
+    .empty-state { padding:48px 24px; text-align:center; color:var(--muted); }
+    .empty-state .es-icon { font-size:40px; margin-bottom:12px; }
+
+    /* Margin badge */
+    .margin-badge { display:inline-block; padding:2px 8px; border-radius:8px;
+      font-size:10px; font-weight:700; }
+    .margin-high   { background:rgba(46,213,115,.15);  color:var(--green); }
+    .margin-medium { background:rgba(245,200,66,.15);  color:var(--gold); }
+    .margin-low    { background:rgba(255,71,87,.15);   color:var(--red); }
+
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(10,12,16,.85);
+      display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:var(--bg2); border:1px solid var(--border); border-radius:18px;
+      width:100%; max-width:520px; max-height:90vh; overflow-y:auto;
+      box-shadow:0 24px 80px rgba(0,0,0,.6); }
+    .modal-header { padding:20px 22px 16px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; }
+    .modal-header h3 { font-size:16px; font-weight:700; }
+    .modal-close { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); font-size:16px; width:32px; height:32px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .modal-close:hover { color:var(--red); border-color:var(--red); }
+    .modal-body { padding:20px 22px; }
+    .modal-footer { padding:16px 22px; border-top:1px solid var(--border);
+      display:flex; gap:10px; justify-content:flex-end; }
+
+    /* Form */
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:11px; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.4px; margin-bottom:7px; }
+    .field-hint { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.4; }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    input[type="text"], input[type="number"], select, textarea {
+      width:100%; background:var(--bg3); border:1.5px solid var(--border); border-radius:10px;
+      color:var(--text); font-size:14px; padding:11px 13px; outline:none;
+      transition:border-color .2s; font-family:inherit; -webkit-appearance:none; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+    input.error, select.error { border-color:var(--red); }
+    .field-error { font-size:11px; color:var(--red); margin-top:4px; display:none; }
+    .field-error.show { display:block; }
+    textarea { resize:vertical; min-height:60px; }
+
+    /* Price preview inside modal */
+    .price-preview { background:var(--bg); border:1px solid var(--border); border-radius:10px;
+      padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+    .price-preview .pp-label { font-size:11px; color:var(--muted); margin-bottom:2px; }
+    .price-preview .pp-val   { font-size:18px; font-weight:800; }
+    .price-preview .pp-margin { font-size:11px; color:var(--muted); margin-top:2px; }
+
+    .btn-cancel { background:transparent; border:1.5px solid var(--border); border-radius:10px;
+      color:var(--muted); padding:9px 20px; font-size:13px; font-weight:600; cursor:pointer;
+      font-family:inherit; transition:all .2s; }
+    .btn-cancel:hover { border-color:var(--muted); color:var(--text); }
+    .btn-save { background:var(--accent); border:none; border-radius:10px; color:white;
+      padding:9px 24px; font-size:13px; font-weight:700; cursor:pointer;
+      font-family:inherit; transition:all .2s; }
+    .btn-save:hover:not(:disabled) { background:#5278ff; }
+    .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:24px; right:24px; background:var(--bg2);
+      border:1px solid var(--border); border-radius:12px; padding:12px 18px;
+      font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px;
+      box-shadow:0 8px 32px rgba(0,0,0,.4); transform:translateY(80px); opacity:0;
+      transition:all .3s ease; z-index:200; max-width:320px; }
+    .toast.show { transform:none; opacity:1; }
+    .toast.success { border-color:var(--green); }
+    .toast.error   { border-color:var(--red); }
+
+    /* Search */
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .search-box { flex:1; min-width:180px; background:var(--bg2); border:1.5px solid var(--border);
+      border-radius:10px; padding:9px 14px; color:var(--text); font-size:13px;
+      font-family:inherit; outline:none; transition:border-color .2s; }
+    .search-box:focus { border-color:var(--accent); }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📷</div>
+      <div>
+        <div class="brand-name">Focus Store</div>
+        <div class="brand-sub">Soporte Técnico</div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item" id="navBackLink" href="../recepcion/index.html">
+        <span class="ni">🎫</span> Tickets
+      </a>
+      <div id="navAdminSection">
+        <div class="nav-section">Administración</div>
+        <a class="nav-item" href="index.html">
+          <span class="ni">👥</span> Personal
+        </a>
+      </div>
+      <a class="nav-item active" href="precios.html">
+        <span class="ni">💰</span> Catálogo de precios
+      </a>
+      <div class="nav-section">Herramientas</div>
+      <a class="nav-item" href="../ingreso.html" target="_blank">
+        <span class="ni">🌐</span> Ingreso público
+      </a>
+      <a class="nav-item" href="../ingreso.html?mode=presencial" target="_blank">
+        <span class="ni">📍</span> Ingreso presencial
+      </a>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-av" id="navAvatar">?</div>
+      <div class="user-info-sb">
+        <h4 id="navName">—</h4>
+        <p id="navRole">—</p>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Cerrar sesión">⏻</button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2>💰 Catálogo de Precios</h2>
+      <button class="btn-primary" id="btnAgregar" onclick="openCreate()">➕ Agregar servicio</button>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Category tabs -->
+      <div class="cat-tabs">
+        <button class="cat-tab active" data-cat="" onclick="filterCat(this,'')">Todos</button>
+        <button class="cat-tab" data-cat="mano_de_obra" onclick="filterCat(this,'mano_de_obra')">🔧 Mano de obra</button>
+        <button class="cat-tab" data-cat="repuesto" onclick="filterCat(this,'repuesto')">🔩 Repuestos</button>
+        <button class="cat-tab" data-cat="diagnostico" onclick="filterCat(this,'diagnostico')">🔍 Diagnóstico</button>
+        <button class="cat-tab" data-cat="servicio" onclick="filterCat(this,'servicio')">⚡ Servicios</button>
+        <button class="cat-tab" data-cat="otro" onclick="filterCat(this,'otro')">📦 Otros</button>
+      </div>
+
+      <!-- Search -->
+      <div class="toolbar">
+        <input class="search-box" type="text" id="searchBox"
+               placeholder="🔍  Buscar servicio o repuesto…"
+               oninput="renderTable()">
+        <select class="search-box" id="filterActive" onchange="renderTable()" style="max-width:160px">
+          <option value="">Todos</option>
+          <option value="true">Solo activos</option>
+          <option value="false">Solo inactivos</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="price-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Servicio / Repuesto</th>
+              <th>Categoría</th>
+              <th class="right">Precio técnico</th>
+              <th class="right">Precio cliente</th>
+              <th class="right">Margen</th>
+              <th class="right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="priceBody">
+            <tr><td colspan="6"><div class="empty-state"><div class="es-icon">⏳</div><p>Cargando…</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Agregar servicio</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field">
+        <label for="fName">Nombre del servicio / repuesto *</label>
+        <input type="text" id="fName" placeholder="Ej: Limpieza de sensor, Pantalla LCD, etc.">
+        <span class="field-error" id="fNameErr">Requerido</span>
+      </div>
+
+      <div class="field">
+        <label for="fDesc">Descripción</label>
+        <textarea id="fDesc" placeholder="Descripción opcional, notas técnicas…"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="fCat">Categoría *</label>
+        <select id="fCat">
+          <option value="">— Seleccione —</option>
+          <option value="mano_de_obra">🔧 Mano de obra</option>
+          <option value="repuesto">🔩 Repuesto</option>
+          <option value="diagnostico">🔍 Diagnóstico</option>
+          <option value="servicio">⚡ Servicio adicional</option>
+          <option value="otro">📦 Otro</option>
+        </select>
+        <span class="field-error" id="fCatErr">Requerido</span>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="fPriceTec">Precio técnico (L) *</label>
+          <input type="number" id="fPriceTec" placeholder="0.00" min="0" step="0.01"
+                 oninput="updatePreview()">
+          <div class="field-hint">Lo que el técnico cobra a Focus Store</div>
+          <span class="field-error" id="fPriceTecErr">Ingrese un precio válido</span>
+        </div>
+        <div class="field">
+          <label for="fPriceCli">Precio cliente (L) *</label>
+          <input type="number" id="fPriceCli" placeholder="0.00" min="0" step="0.01"
+                 oninput="updatePreview()">
+          <div class="field-hint">Lo que Focus Store cobra al cliente</div>
+          <span class="field-error" id="fPriceCliErr">Ingrese un precio válido</span>
+        </div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="price-preview" id="pricePreview" style="margin-bottom:16px">
+        <div>
+          <div class="pp-label">Precio técnico</div>
+          <div class="pp-val price-tecnico" id="pvTec">L 0.00</div>
+        </div>
+        <div style="text-align:center">
+          <div class="pp-label">Margen</div>
+          <div id="pvMargin">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pp-label">Precio cliente</div>
+          <div class="pp-val price-cliente" id="pvCli">L 0.00</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="fNotes">Notas internas</label>
+          <input type="text" id="fNotes" placeholder="Solo visible al staff">
+        </div>
+        <div class="field" id="fieldActive" style="display:none">
+          <label for="fActive">Estado</label>
+          <select id="fActive">
+            <option value="true">✅ Activo</option>
+            <option value="false">❌ Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btnSave" onclick="saveItem()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CAT_LABELS = {
+  mano_de_obra:'Mano de obra', repuesto:'Repuesto',
+  diagnostico:'Diagnóstico', servicio:'Servicio', otro:'Otro'
+};
+const ROLE_LABELS = {
+  admin:'Administrador', supervisor:'Supervisor',
+  recepcion:'Recepción', tecnico:'Técnico', auditor:'Auditor'
+};
+
+let session = null;
+let allItems = [];
+let currentCat = '';
+let editingId = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  session = getSession();
+  if (!session) { location.href = '../login.html'; return; }
+  // Técnico puede ver en modo lectura; otros roles no autorizados van a recepción
+  const isTecnico  = session.role === 'tecnico';
+  const canEdit    = ['admin','supervisor'].includes(session.role);
+  if (!canEdit && !isTecnico) {
+    location.href = '../recepcion/index.html'; return;
+  }
+
+  // Ocultar controles de edición para técnico
+  if (isTecnico) {
+    document.getElementById('btnAgregar').style.display = 'none';
+  }
+  const av = document.getElementById('navAvatar');
+  av.textContent = session.avatar || session.full_name[0];
+  av.style.background = (session.color || '#3d6aff') + '33';
+  av.style.color = session.color || '#3d6aff';
+  document.getElementById('navName').textContent = session.full_name;
+  document.getElementById('navRole').textContent = ROLE_LABELS[session.role] || session.role;
+
+  // Para técnico: ocultar sección Administración del sidebar y ajustar link de vuelta
+  if (isTecnico) {
+    document.getElementById('navAdminSection').style.display = 'none';
+    document.getElementById('navBackLink').href = '../tecnico/index.html';
+    document.getElementById('navBackLink').textContent = '🔧 Panel técnico';
+  }
+
+  await loadItems();
+});
+
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    if (Date.now() - s.logged_in_at > 12*3600*1000) { localStorage.removeItem('sp_session'); return null; }
+    return s;
+  } catch { return null; }
+}
+function logout() { localStorage.removeItem('sp_session'); location.href = '../login.html'; }
+
+/* Load */
+async function loadItems() {
+  const { data, error } = await sb.from('sp_price_catalog').select('*').order('category').order('name');
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  allItems = data || [];
+  renderTable();
+}
+
+/* Filter by category tab */
+function filterCat(el, cat) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentCat = cat;
+  renderTable();
+}
+
+/* Render table */
+function renderTable() {
+  const q       = document.getElementById('searchBox').value.toLowerCase().trim();
+  const actFilt = document.getElementById('filterActive').value;
+
+  const filtered = allItems.filter(i => {
+    if (currentCat && i.category !== currentCat) return false;
+    if (q && !i.name.toLowerCase().includes(q) && !(i.description||'').toLowerCase().includes(q)) return false;
+    if (actFilt === 'true'  && !i.is_active) return false;
+    if (actFilt === 'false' &&  i.is_active) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('priceBody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+      <div class="es-icon">💸</div>
+      <p>No hay servicios con esos filtros.</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(i => {
+    const tec = parseFloat(i.unit_price_tecnico) || 0;
+    const cli = parseFloat(i.unit_price_cliente) || 0;
+    const margin = tec > 0 ? ((cli - tec) / tec * 100).toFixed(0) : null;
+    let marginHtml = '—';
+    if (margin !== null) {
+      const cls = margin >= 40 ? 'margin-high' : margin >= 15 ? 'margin-medium' : 'margin-low';
+      marginHtml = `<span class="margin-badge ${cls}">${margin}%</span>`;
+    }
+    return `
+    <tr>
+      <td>
+        <div style="font-weight:600;font-size:14px">${esc(i.name)}</div>
+        ${i.description ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(i.description)}</div>` : ''}
+        ${i.notes ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-style:italic">📝 ${esc(i.notes)}</div>` : ''}
+      </td>
+      <td><span class="cat-badge cat-${i.category}">${CAT_LABELS[i.category]||i.category}</span></td>
+      <td class="right mono price-tecnico">L ${fmt(tec)}</td>
+      <td class="right mono price-cliente">L ${fmt(cli)}</td>
+      <td class="right">${marginHtml}</td>
+      <td class="right">
+        <div class="row-actions">
+          <span title="${i.is_active ? 'Activo' : 'Inactivo'}" style="font-size:14px">${i.is_active ? '✅' : '⬜'}</span>
+          ${canEdit ? `<button class="btn-icon" onclick="openEdit('${i.id}')" title="Editar">✏️</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* Modal - Create */
+function openCreate() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '➕ Agregar servicio';
+  document.getElementById('fName').value    = '';
+  document.getElementById('fDesc').value    = '';
+  document.getElementById('fCat').value     = '';
+  document.getElementById('fPriceTec').value = '';
+  document.getElementById('fPriceCli').value = '';
+  document.getElementById('fNotes').value   = '';
+  document.getElementById('fieldActive').style.display = 'none';
+  clearErrors();
+  updatePreview();
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('fName').focus();
+}
+
+/* Modal - Edit */
+function openEdit(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = '✏️ Editar servicio';
+  document.getElementById('fName').value     = item.name;
+  document.getElementById('fDesc').value     = item.description || '';
+  document.getElementById('fCat').value      = item.category;
+  document.getElementById('fPriceTec').value = item.unit_price_tecnico;
+  document.getElementById('fPriceCli').value = item.unit_price_cliente;
+  document.getElementById('fNotes').value    = item.notes || '';
+  document.getElementById('fActive').value   = String(item.is_active);
+  document.getElementById('fieldActive').style.display = 'block';
+  clearErrors();
+  updatePreview();
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('fName').focus();
+}
+
+function closeModal()  { document.getElementById('modalOverlay').classList.remove('show'); }
+function closeOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+/* Live price preview */
+function updatePreview() {
+  const tec = parseFloat(document.getElementById('fPriceTec').value) || 0;
+  const cli = parseFloat(document.getElementById('fPriceCli').value) || 0;
+  document.getElementById('pvTec').textContent = 'L ' + fmt(tec);
+  document.getElementById('pvCli').textContent = 'L ' + fmt(cli);
+  const m = document.getElementById('pvMargin');
+  if (tec > 0) {
+    const pct = ((cli - tec) / tec * 100).toFixed(1);
+    const cls = pct >= 40 ? 'margin-high' : pct >= 15 ? 'margin-medium' : 'margin-low';
+    m.innerHTML = `<span class="margin-badge ${cls}">${pct > 0 ? '+' : ''}${pct}%</span>`;
+  } else {
+    m.textContent = '—';
+  }
+}
+
+/* Save */
+async function saveItem() {
+  clearErrors();
+  let ok = true;
+  const name = document.getElementById('fName').value.trim();
+  const cat  = document.getElementById('fCat').value;
+  const tec  = parseFloat(document.getElementById('fPriceTec').value);
+  const cli  = parseFloat(document.getElementById('fPriceCli').value);
+
+  if (!name) { showErr('fName','fNameErr','Ingrese el nombre'); ok = false; }
+  if (!cat)  { showErr('fCat','fCatErr','Seleccione categoría'); ok = false; }
+  if (isNaN(tec) || tec < 0) { showErr('fPriceTec','fPriceTecErr','Ingrese un precio válido'); ok = false; }
+  if (isNaN(cli) || cli < 0) { showErr('fPriceCli','fPriceCliErr','Ingrese un precio válido'); ok = false; }
+  if (!ok) return;
+
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  try {
+    const payload = {
+      name, category: cat, description: document.getElementById('fDesc').value.trim() || null,
+      unit_price_tecnico: tec, unit_price_cliente: cli,
+      notes: document.getElementById('fNotes').value.trim() || null,
+      created_by: session.id
+    };
+    if (editingId) {
+      payload.is_active = document.getElementById('fActive').value === 'true';
+      const { error } = await sb.from('sp_price_catalog').update(payload).eq('id', editingId);
+      if (error) throw error;
+      showToast('✅ Servicio actualizado', 'success');
+    } else {
+      const { error } = await sb.from('sp_price_catalog').insert(payload);
+      if (error) throw error;
+      showToast('✅ Servicio agregado', 'success');
+    }
+    closeModal();
+    await loadItems();
+  } catch (ex) {
+    showToast('Error: ' + ex.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+}
+
+/* Helpers */
+function fmt(n) { return Number(n).toLocaleString('es-HN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showErr(fId, eId, msg) {
+  document.getElementById(fId)?.classList.add('error');
+  const el = document.getElementById(eId); if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+function clearErrors() {
+  document.querySelectorAll('.field-error').forEach(e => { e.classList.remove('show'); e.textContent = ''; });
+  document.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
+}
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

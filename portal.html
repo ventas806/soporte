@@ -1,0 +1,1082 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi Ticket · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+      --orange: #ff9f43;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header-title h1 { font-size: 15px; font-weight: 700; }
+    .header-title p  { font-size: 12px; color: var(--muted); }
+
+    /* ── Container ──────────────────────────────────────────── */
+    .container { max-width: 520px; margin: 0 auto; padding: 0 16px; }
+
+    /* ── Loading / Error ────────────────────────────────────── */
+    .centered {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .centered .big-icon { font-size: 52px; margin-bottom: 16px; }
+    .centered h2 { font-size: 18px; margin-bottom: 8px; }
+    .centered p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Ticket header card ─────────────────────────────────── */
+    .ticket-header-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 20px;
+      margin-bottom: 16px;
+    }
+    .tkt-meta {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .tkt-number {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .tkt-date { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .pill-azul     { background: rgba(61,106,255,.15);  color: #7090ff; border: 1px solid rgba(61,106,255,.3); }
+    .pill-verde    { background: rgba(46,213,115,.15);  color: var(--green); border: 1px solid rgba(46,213,115,.3); }
+    .pill-dorado   { background: rgba(245,200,66,.15);  color: var(--gold);  border: 1px solid rgba(245,200,66,.3); }
+    .pill-naranja  { background: rgba(255,159,67,.15);  color: var(--orange); border: 1px solid rgba(255,159,67,.3); }
+    .pill-rojo     { background: rgba(255,71,87,.15);   color: var(--red);   border: 1px solid rgba(255,71,87,.3); }
+    .pill-gris     { background: rgba(136,146,164,.12); color: var(--muted); border: 1px solid rgba(136,146,164,.25); }
+
+    /* Equipment summary */
+    .equip-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .equip-icon { font-size: 28px; flex-shrink: 0; }
+    .equip-info h3 { font-size: 15px; font-weight: 600; }
+    .equip-info p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Action banner (needs client action) ────────────────── */
+    .action-banner {
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .action-banner.show { display: block; }
+    .action-banner h3 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .action-banner p { font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+    .action-banner-warn {
+      background: rgba(245,200,66,.08);
+      border: 1.5px solid rgba(245,200,66,.3);
+    }
+    .action-banner-warn h3 { color: var(--gold); }
+    .action-banner-warn p  { color: #c8a820; }
+    .action-banner-green {
+      background: rgba(46,213,115,.08);
+      border: 1.5px solid rgba(46,213,115,.3);
+    }
+    .action-banner-green h3 { color: var(--green); }
+    .action-banner-green p  { color: #5ae08a; }
+
+    /* ── Quote card ─────────────────────────────────────────── */
+    .quote-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .quote-card.show { display: block; }
+    .quote-title {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .quote-items { padding: 14px 18px; }
+    .quote-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .quote-item:last-child { border-bottom: none; }
+    .quote-item .qi-name { color: var(--text); }
+    .quote-item .qi-qty  { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .quote-item .qi-price { font-weight: 600; color: var(--accent); }
+    .quote-totals { padding: 14px 18px; border-top: 1px solid var(--border); background: var(--bg3); }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .total-row.final {
+      font-size: 16px;
+      font-weight: 700;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .total-row .label { color: var(--muted); }
+    .total-row.final .label { color: var(--text); }
+    .total-row .amount { color: var(--text); }
+    .total-row.final .amount { color: var(--green); font-size: 18px; }
+    .quote-validity {
+      padding: 10px 18px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    .quote-actions {
+      display: flex;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-approve { background: var(--green); color: #0a0c10; }
+    .btn-approve:hover { background: #40e080; }
+    .btn-reject  { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); }
+    .btn-reject:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Section card ───────────────────────────────────────── */
+    .section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+    }
+
+    /* ── Status timeline ────────────────────────────────────── */
+    .timeline { padding: 16px 18px; }
+    .tl-item {
+      display: flex;
+      gap: 14px;
+      padding-bottom: 16px;
+      position: relative;
+    }
+    .tl-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 11px; top: 24px;
+      width: 2px;
+      bottom: 0;
+      background: var(--border);
+    }
+    .tl-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .tl-dot.done    { background: var(--green); }
+    .tl-dot.current { background: var(--accent); box-shadow: 0 0 0 3px rgba(61,106,255,.25); }
+    .tl-dot.future  { background: var(--border); }
+    .tl-content h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .tl-content p  { font-size: 11px; color: var(--muted); }
+
+    /* ── Messages ───────────────────────────────────────────── */
+    .messages-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 88%;
+    }
+    .msg-bubble.staff {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .msg-bubble.system {
+      background: rgba(61,106,255,.08);
+      border: 1px solid rgba(61,106,255,.2);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      font-style: italic;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .msg-meta { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .no-msgs { padding: 20px 18px; font-size: 13px; color: var(--muted); text-align: center; }
+
+    /* ── Fault info ─────────────────────────────────────────── */
+    .info-rows { padding: 14px 18px; }
+    .info-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-row .lbl { font-size: 12px; color: var(--muted); min-width: 110px; flex-shrink: 0; }
+    .info-row .val { font-size: 13px; }
+
+    /* ── Contact card ───────────────────────────────────────── */
+    .contact-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .contact-icon { font-size: 28px; }
+    .contact-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .contact-info p  { font-size: 12px; color: var(--muted); }
+
+    /* ── Reject modal ───────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,12,16,.9);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+    }
+    .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .modal textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 12px;
+      outline: none;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+      margin-bottom: 14px;
+    }
+    .modal-btns { display: flex; gap: 10px; }
+
+    /* ── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: var(--green);
+      transition: transform .3s;
+      pointer-events: none;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">📷</div>
+  <div class="header-title">
+    <h1>Focus Store</h1>
+    <p>Estado de mi equipo</p>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="container" id="loadingView">
+  <div class="centered">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:13px">Cargando información del ticket…</p>
+  </div>
+</div>
+
+<!-- Error: token inválido -->
+<div class="container" id="errorView" style="display:none">
+  <div class="centered">
+    <div class="big-icon">🔒</div>
+    <h2>Enlace inválido o expirado</h2>
+    <p>Este enlace no es válido o ya expiró (60 días).<br>
+    Comuníquese con Focus Store para asistencia.</p>
+    <br>
+    <p style="font-size:12px;color:var(--muted)">Plaza Premier, 2do nivel · Col. Humuya · Tegucigalpa</p>
+  </div>
+</div>
+
+<!-- Error: fallo de red / JS -->
+<div class="container" id="errorNetView" style="display:none">
+  <div class="centered">
+    <div class="big-icon">📡</div>
+    <h2>Error de conexión</h2>
+    <p>No se pudo cargar la información del ticket.<br>
+    Verifica tu conexión a internet e intenta de nuevo.</p>
+    <br>
+    <button onclick="location.reload()"
+      style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+      🔄 Reintentar
+    </button>
+    <br><br>
+    <p style="font-size:12px;color:var(--muted)">Si el problema persiste, comuníquese con Focus Store.</p>
+  </div>
+</div>
+
+<!-- Main content -->
+<div id="mainView" style="display:none">
+  <div class="container">
+
+    <!-- Action banners -->
+    <div class="action-banner action-banner-warn" id="bannerCotizacion">
+      <h3>⚡ Su aprobación es requerida</h3>
+      <p>Tenemos una cotización lista para la reparación de su equipo. Revísela y apruebe o rechace para continuar.</p>
+    </div>
+    <div class="action-banner action-banner-green" id="bannerListo">
+      <h3>🎉 ¡Su equipo está listo para retiro!</h3>
+      <p>Puede retirarlo en nuestras instalaciones. Tiene <strong>15 días calendario</strong> de almacenamiento gratuito. El equipo se declara <strong>abandonado</strong> a los <strong>60 días</strong> sin retiro.</p>
+      <div id="confirmarEntregaArea" style="margin-top:14px">
+        <button onclick="openConfirmarEntrega()"
+          style="width:100%;background:#2ed573;color:#0a0c10;font-weight:700;font-size:15px;padding:14px;border:none;border-radius:10px;cursor:pointer;font-family:inherit">
+          ✅ Ya recogí mi equipo
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal confirmar entrega -->
+    <div id="entregaOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center">
+      <div style="background:#12161f;border:1px solid #2a2f3f;border-radius:16px;padding:28px 24px;width:340px;max-width:92vw;text-align:center">
+        <div style="font-size:48px;margin-bottom:12px">📦</div>
+        <h3 style="font-size:18px;color:#e8eaf0;margin-bottom:8px">¿Confirmar recepción?</h3>
+        <p style="font-size:13px;color:#8892a4;margin-bottom:24px">Al confirmar, quedará registrado que recogió su equipo. Esta acción no se puede deshacer.</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="closeConfirmarEntrega()"
+            style="flex:1;padding:12px;background:#1a1f2e;border:1px solid #2a2f3f;border-radius:10px;color:#8892a4;font-size:14px;cursor:pointer;font-family:inherit">
+            Cancelar
+          </button>
+          <button onclick="confirmarEntrega()"
+            style="flex:1;padding:12px;background:#2ed573;color:#0a0c10;font-weight:700;font-size:14px;border:none;border-radius:10px;cursor:pointer;font-family:inherit">
+            Sí, confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ticket header -->
+    <div class="ticket-header-card">
+      <div class="tkt-meta">
+        <div>
+          <div class="tkt-number" id="ticketNum">—</div>
+          <div class="tkt-date" id="ticketDate">—</div>
+        </div>
+        <div class="status-pill pill-azul" id="statusPill">—</div>
+      </div>
+      <div class="equip-row">
+        <span class="equip-icon" id="equipIcon">📷</span>
+        <div class="equip-info">
+          <h3 id="equipName">—</h3>
+          <p id="equipDetail">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quote card (conditionally shown) -->
+    <div class="quote-card" id="quoteCard">
+      <div class="quote-title">
+        <span>💰 Cotización de reparación</span>
+        <span class="status-pill pill-dorado" id="quoteStatusPill">Pendiente</span>
+      </div>
+      <div class="quote-items" id="quoteItems">—</div>
+      <div class="quote-totals">
+        <div class="total-row"><span class="label">Subtotal</span><span class="amount" id="quoteSubtotal">—</span></div>
+        <div class="total-row" id="quoteTaxRow"><span class="label">ISV (15%)</span><span class="amount" id="quoteTax">—</span></div>
+        <div class="total-row final"><span class="label">Total</span><span class="amount" id="quoteTotal">—</span></div>
+      </div>
+      <div id="quoteDaysSection" style="display:none;background:rgba(61,106,255,.08);border:1px solid rgba(61,106,255,.25);border-radius:10px;padding:12px 14px;margin:12px 0"></div>
+      <div class="quote-validity" id="quoteValidity"></div>
+      <div class="quote-actions" id="quoteActions">
+        <button class="btn btn-reject" onclick="openRejectModal()">✗ Rechazar</button>
+        <button class="btn btn-approve" onclick="approveQuote()">✓ Aprobar reparación</button>
+      </div>
+    </div>
+
+    <!-- Status timeline -->
+    <div class="section">
+      <div class="section-title">Progreso del ticket</div>
+      <div class="timeline" id="timelineContent">—</div>
+    </div>
+
+    <!-- Messages -->
+    <div class="section">
+      <div class="section-title">Mensajes del técnico</div>
+      <div class="messages-list" id="messagesList">
+        <p class="no-msgs">No hay mensajes aún.</p>
+      </div>
+    </div>
+
+    <!-- Fault info -->
+    <div class="section">
+      <div class="section-title">Información del ticket</div>
+      <div class="info-rows">
+        <div class="info-row"><span class="lbl">Falla reportada</span><span class="val" id="faultText">—</span></div>
+        <div class="info-row" id="notasRow" style="display:none">
+          <span class="lbl">Notas</span><span class="val" id="notasText">—</span>
+        </div>
+        <div class="info-row" id="serialRow" style="display:none">
+          <span class="lbl">N° de serie</span><span class="val" id="serialText">—</span>
+        </div>
+        <div class="info-row" id="accessRow" style="display:none">
+          <span class="lbl">Accesorios</span><span class="val" id="accessText">—</span>
+        </div>
+        <div class="info-row" id="estimatedRow" style="display:none">
+          <span class="lbl">Entrega estimada</span><span class="val" id="estimatedText">—</span>
+        </div>
+        <div class="info-row" id="warrantyRow" style="display:none">
+          <span class="lbl">Garantía</span><span class="val" id="warrantyText">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-card">
+      <span class="contact-icon">📞</span>
+      <div class="contact-info">
+        <h4>¿Necesita ayuda?</h4>
+        <p>Contáctenos en Focus Store · Plaza Premier, 2do nivel<br>Col. Humuya · Tegucigalpa, Honduras</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Reject modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <h3>✗ Rechazar cotización</h3>
+    <p>Por favor indícanos el motivo del rechazo para que podamos ayudarte mejor.</p>
+    <textarea id="rejectReason" placeholder="Ej: El precio es muy alto, prefiero no repararlo…" style="border:1.5px solid var(--border)"></textarea>
+    <p id="rejectReasonErr" style="display:none;color:var(--red);font-size:12px;margin-top:4px">Por favor escribe el motivo del rechazo.</p>
+    <div class="modal-btns">
+      <button class="btn" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted)"
+        onclick="closeRejectModal()">Cancelar</button>
+      <button class="btn btn-reject" style="flex:1;background:var(--red);color:white"
+        onclick="confirmReject()">Rechazar cotización</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ═══════════════════════════════════════════════════════════════
+   STATUS CONFIG
+═══════════════════════════════════════════════════════════════ */
+const STATUS_MAP = {
+  solicitud_recibida:   { label: '📝 Solicitud recibida',   pill: 'pill-azul',   emoji: '📝' },
+  equipo_en_camino:     { label: '🚚 Equipo en camino',     pill: 'pill-dorado', emoji: '🚚' },
+  equipo_recibido:      { label: '📬 Equipo recibido',      pill: 'pill-verde',  emoji: '📬' },
+  en_diagnostico:       { label: '🔍 En diagnóstico',       pill: 'pill-azul',   emoji: '🔍' },
+  esperando_aprobacion: { label: '⚡ Esperando aprobación', pill: 'pill-dorado', emoji: '⚡' },
+  aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde',  emoji: '✅' },
+  esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja',emoji: '📦' },
+  en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul',   emoji: '🔧' },
+  en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul',   emoji: '🧪' },
+  listo_para_entrega:   { label: '🎉 Listo para retiro',    pill: 'pill-verde',  emoji: '🎉' },
+  entregado:            { label: '✔ Entregado',             pill: 'pill-verde',  emoji: '✔' },
+  cerrado:              { label: '🔒 Cerrado',              pill: 'pill-gris',   emoji: '🔒' },
+  cancelado:            { label: '✗ Cancelado',             pill: 'pill-rojo',   emoji: '✗'  },
+  irreparable:          { label: '⛔ No reparable',         pill: 'pill-rojo',   emoji: '⛔' },
+  abandonado:           { label: '⚠️ Abandonado',           pill: 'pill-rojo',   emoji: '⚠️' }
+};
+
+const CATEGORY_ICONS = {
+  camara:'📷', lente:'🔭', flash:'⚡', luz:'💡', audio:'🎙',
+  gimbal:'🎬', drone:'🚁', computadora:'💻', monitor:'🖥',
+  tripode:'📸', otro:'🔧'
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBALS
+═══════════════════════════════════════════════════════════════ */
+let ticketData   = null;
+let quoteData    = null;
+let quoteId      = null;
+let customerData = null; // { full_name, phone }
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+const token = new URLSearchParams(location.search).get('token');
+
+if (!token) {
+  showView('error');
+} else {
+  loadTicket();
+}
+
+async function loadTicket() {
+  try {
+    // Fetch ticket + equipment
+    const { data: t, error } = await sb
+      .from('sp_tickets')
+      .select(`
+        id, ticket_number, status, ticket_origin, reported_fault, client_notes,
+        created_at, estimated_ready_at, delivered_at, closed_at,
+        warranty_days, warranty_expires_at,
+        equipment_id, token_expires_at,
+        sp_equipment!sp_tickets_equipment_id_fkey (
+          category, brand, model, serial_number, physical_condition, accessories
+        ),
+        sp_customers!sp_tickets_customer_id_fkey (full_name, phone)
+      `)
+      .eq('access_token', token)
+      .single();
+
+    // Token no encontrado en BD → enlace inválido
+    if (error || !t) { showView('error'); return; }
+
+    // Token expirado → enlace expirado
+    if (new Date(t.token_expires_at) < new Date()) { showView('error'); return; }
+
+    ticketData   = t;
+    customerData = t.sp_customers || null;
+
+    // Fetch status history
+    const { data: history } = await sb
+      .from('sp_ticket_status_history')
+      .select('from_status, to_status, created_at, actor_type')
+      .eq('ticket_id', t.id)
+      .order('created_at', { ascending: true });
+
+    // Fetch messages visible to client
+    const { data: msgs } = await sb
+      .from('sp_ticket_messages')
+      .select('author_type, message, created_at')
+      .eq('ticket_id', t.id)
+      .eq('is_visible_to_client', true)
+      .order('created_at', { ascending: true });
+
+    // Fetch client quote (pendiente = waiting client approval)
+    if (t.status === 'esperando_aprobacion') {
+      const { data: q } = await sb
+        .from('sp_repair_quotes')
+        .select(`*, sp_quote_items(*)`)
+        .eq('ticket_id', t.id)
+        .eq('quote_type', 'cliente')
+        .eq('status', 'pendiente')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      quoteData = q;
+      if (q) quoteId = q.id;
+    }
+
+    renderTicket(t, history || [], msgs || []);
+    showView('main');
+
+  } catch (ex) {
+    // Error de red o JavaScript — mostrar pantalla de reintento
+    console.error('Portal error:', ex);
+    showView('errorNet');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════════ */
+function renderTicket(t, history, msgs) {
+  const eq  = t.sp_equipment;
+  const st  = STATUS_MAP[t.status] || { label: t.status, pill: 'pill-gris' };
+
+  // Header
+  document.getElementById('ticketNum').textContent  = t.ticket_number;
+  document.getElementById('ticketDate').textContent =
+    'Registrado el ' + fmtDate(t.created_at);
+
+  // Status pill
+  const pill = document.getElementById('statusPill');
+  pill.textContent = st.label;
+  pill.className   = 'status-pill ' + st.pill;
+
+  // Equipment
+  document.getElementById('equipIcon').textContent  = CATEGORY_ICONS[eq.category] || '🔧';
+  document.getElementById('equipName').textContent  = `${eq.brand} ${eq.model}`;
+  document.getElementById('equipDetail').textContent = capitalize(eq.category) +
+    (eq.serial_number ? ` · S/N: ${eq.serial_number}` : '');
+
+  // Action banners
+  if (t.status === 'esperando_aprobacion') {
+    document.getElementById('bannerCotizacion').classList.add('show');
+  }
+  if (t.status === 'listo_para_entrega') {
+    document.getElementById('bannerListo').classList.add('show');
+  }
+
+  // Fault info
+  document.getElementById('faultText').textContent = t.reported_fault;
+  if (t.client_notes) {
+    document.getElementById('notasText').textContent = t.client_notes;
+    document.getElementById('notasRow').style.display = 'flex';
+  }
+  if (eq.serial_number) {
+    document.getElementById('serialText').textContent = eq.serial_number;
+    document.getElementById('serialRow').style.display = 'flex';
+  }
+  if (eq.accessories?.length) {
+    document.getElementById('accessText').textContent = eq.accessories.join(', ');
+    document.getElementById('accessRow').style.display = 'flex';
+  }
+  if (t.estimated_ready_at) {
+    document.getElementById('estimatedText').textContent = fmtDate(t.estimated_ready_at);
+    document.getElementById('estimatedRow').style.display = 'flex';
+  }
+  if (t.warranty_expires_at) {
+    document.getElementById('warrantyText').textContent =
+      `${t.warranty_days} días · vence ${fmtDate(t.warranty_expires_at)}`;
+    document.getElementById('warrantyRow').style.display = 'flex';
+  }
+
+  // Quote
+  if (quoteData) renderQuote(quoteData);
+
+  // Timeline
+  renderTimeline(t.status, history);
+
+  // Messages
+  renderMessages(msgs);
+}
+
+function renderQuote(q) {
+  const card = document.getElementById('quoteCard');
+  card.classList.add('show');
+
+  // Items
+  const items = q.sp_quote_items || [];
+  document.getElementById('quoteItems').innerHTML = items.length
+    ? items.map(i => `
+        <div class="quote-item">
+          <div>
+            <div class="qi-name">${i.description}</div>
+            <div class="qi-qty">${i.item_type || ''} × ${i.quantity}</div>
+          </div>
+          <div class="qi-price">L ${fmt(i.total_price)}</div>
+        </div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">Sin items detallados.</p>';
+
+  // Totals
+  document.getElementById('quoteSubtotal').textContent = 'L ' + fmt(q.subtotal);
+  if (q.tax_amount > 0) {
+    document.getElementById('quoteTax').textContent = 'L ' + fmt(q.tax_amount);
+  } else {
+    document.getElementById('quoteTaxRow').style.display = 'none';
+  }
+  document.getElementById('quoteTotal').textContent = 'L ' + fmt(q.total);
+
+  // Validity
+  if (q.expires_at) {
+    document.getElementById('quoteValidity').textContent =
+      '⏱ Cotización válida hasta: ' + fmtDate(q.expires_at);
+  }
+
+  // Days breakdown
+  const totalDays = (q.repair_days||0) + (q.parts_days||0) + (q.testing_days||0);
+  const daysEl = document.getElementById('quoteDaysSection');
+  if (daysEl) {
+    if (totalDays > 0) {
+      daysEl.style.display = 'block';
+      daysEl.innerHTML = `
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">📅 Días estimados de trabajo</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:5px 16px;font-size:13px">
+          <span>🔧 Reparación</span><span style="font-weight:700;text-align:right">${q.repair_days||0} día(s)</span>
+          ${(q.parts_days||0) > 0 ? `<span>📦 Repuesto</span><span style="font-weight:700;text-align:right">${q.parts_days} día(s)</span>` : ''}
+          <span>🧪 Pruebas</span><span style="font-weight:700;text-align:right">${q.testing_days||0} día(s)</span>
+          <span style="border-top:1px solid rgba(255,255,255,.1);padding-top:6px;margin-top:2px;font-weight:700;color:#fff">⏱️ Total estimado</span>
+          <span style="border-top:1px solid rgba(255,255,255,.1);padding-top:6px;margin-top:2px;font-weight:800;font-size:16px;color:#3d6aff;text-align:right">${totalDays} día(s)</span>
+        </div>`;
+    } else {
+      daysEl.style.display = 'none';
+    }
+  }
+
+  // Status
+  if (q.status !== 'pendiente') {
+    document.getElementById('quoteActions').style.display = 'none';
+    const sPill = document.getElementById('quoteStatusPill');
+    if (q.status === 'aprobada') {
+      sPill.textContent = '✓ Aprobada';
+      sPill.className   = 'status-pill pill-verde';
+    } else if (q.status === 'rechazada') {
+      sPill.textContent = '✗ Rechazada';
+      sPill.className   = 'status-pill pill-rojo';
+    }
+  }
+}
+
+function renderTimeline(currentStatus, history) {
+  // Progress stages (simplified for client view)
+  const stages = [
+    { key: 'solicitud_recibida',   label: 'Solicitud recibida',   desc: 'Hemos recibido su solicitud.' },
+    { key: 'equipo_recibido',      label: 'Equipo en nuestras manos', desc: 'El equipo fue recibido en la tienda.' },
+    { key: 'en_diagnostico',       label: 'Diagnóstico',          desc: 'El técnico está evaluando el equipo.' },
+    { key: 'esperando_aprobacion', label: 'Cotización enviada',   desc: 'Revise y apruebe la cotización.' },
+    { key: 'en_reparacion',        label: 'En reparación',        desc: 'El técnico está reparando el equipo.' },
+    { key: 'listo_para_entrega',   label: 'Listo para retiro',    desc: 'Su equipo está listo para ser recogido.' },
+    { key: 'entregado',            label: 'Entregado',            desc: 'Equipo entregado exitosamente.' }
+  ];
+
+  // Determine reached stages from history
+  const reachedKeys = new Set(history.map(h => h.to_status));
+  reachedKeys.add(currentStatus);
+
+  // Find current stage index
+  let currentIdx = -1;
+  stages.forEach((s, i) => { if (s.key === currentStatus) currentIdx = i; });
+  // Also mark all before current as done
+  const passedIdx = currentIdx >= 0 ? currentIdx : stages.findIndex(s => reachedKeys.has(s.key));
+
+  const html = stages.map((s, i) => {
+    const isDone    = i < currentIdx || (reachedKeys.has(s.key) && s.key !== currentStatus);
+    const isCurrent = s.key === currentStatus;
+    const dotClass  = isDone ? 'done' : isCurrent ? 'current' : 'future';
+    const dotEmoji  = isDone ? '✓' : isCurrent ? '●' : '○';
+
+    // Find date from history
+    const histEntry = history.find(h => h.to_status === s.key);
+    const dateStr   = histEntry ? fmtDateShort(histEntry.created_at) : '';
+
+    return `
+      <div class="tl-item">
+        <div class="tl-dot ${dotClass}">${isDone ? '✓' : isCurrent ? '●' : '○'}</div>
+        <div class="tl-content">
+          <h4 style="color:${isDone ? 'var(--green)' : isCurrent ? 'var(--text)' : 'var(--muted)'}">${s.label}</h4>
+          <p>${isCurrent || isDone ? s.desc : ''}${dateStr ? ` · ${dateStr}` : ''}</p>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('timelineContent').innerHTML = html;
+}
+
+function renderMessages(msgs) {
+  if (!msgs.length) return;
+
+  document.getElementById('messagesList').innerHTML = msgs.map(m => `
+    <div>
+      <div class="msg-bubble ${m.author_type === 'system' ? 'system' : 'staff'}">
+        ${esc(m.message)}
+      </div>
+      <div class="msg-meta">${fmtDateTime(m.created_at)}</div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   QUOTE ACTIONS
+═══════════════════════════════════════════════════════════════ */
+async function approveQuote() {
+  if (!quoteId || !ticketData) return;
+  if (!confirm('¿Confirma que aprueba la reparación por el monto indicado?')) return;
+
+  try {
+    // Update quote
+    const { error: qErr } = await sb
+      .from('sp_repair_quotes')
+      .update({ status: 'aprobada', approved_at: new Date().toISOString() })
+      .eq('id', quoteId);
+    if (qErr) throw qErr;
+
+    // Update ticket status
+    const { error: tErr } = await sb
+      .from('sp_tickets')
+      .update({ status: 'aprobado_reparacion' })
+      .eq('id', ticketData.id);
+    if (tErr) throw tErr;
+
+    // NO se notifica al técnico aquí — el técnico se notifica cuando
+    // el ADMIN aprueba su cotización interna (approveInternalQuote en ticket.html)
+
+    showToast('✅ Cotización aprobada. ¡Gracias!');
+    setTimeout(() => location.reload(), 2000);
+
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+function openRejectModal()  { document.getElementById('rejectModal').classList.add('show'); }
+function closeRejectModal() { document.getElementById('rejectModal').classList.remove('show'); }
+
+async function confirmReject() {
+  if (!quoteId || !ticketData) return;
+
+  const reason = document.getElementById('rejectReason').value.trim();
+  const errEl  = document.getElementById('rejectReasonErr');
+
+  // Motivo obligatorio
+  if (!reason) {
+    errEl.style.display = 'block';
+    document.getElementById('rejectReason').style.borderColor = 'var(--red)';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  try {
+    const { error: qErr } = await sb
+      .from('sp_repair_quotes')
+      .update({ status: 'rechazada', rejection_reason: reason })
+      .eq('id', quoteId);
+    if (qErr) throw qErr;
+
+    // Cambiar ticket a cancelado para que admin vea en lista que fue rechazado
+    const { error: tErr } = await sb
+      .from('sp_tickets')
+      .update({ status: 'cancelado' })
+      .eq('id', ticketData.id);
+    if (tErr) throw tErr;
+
+    closeRejectModal();
+
+    // Notificar al admin via WhatsApp
+    const eq   = ticketData.sp_equipment;
+    const tNum = ticketData.ticket_number;
+    const name = customerData?.full_name || 'El cliente';
+    try {
+      // Obtener admins con teléfono desde la BD
+      const { data: admins } = await sb.from('sp_profiles')
+        .select('phone, email, full_name')
+        .in('role', ['admin', 'supervisor'])
+        .eq('is_active', true);
+
+      const waMsg = `❌ *Cliente rechazó cotización — Focus Store*\n\n*${name}* rechazó la cotización del Ticket *#${tNum}*.\n\n💻 Equipo: ${eq?.brand||''} ${eq?.model||''}\n📝 Motivo: "${reason}"\n\nRevisa el ticket para tomar acción:\nhttps://soporte.focusstore.net/recepcion/ticket.html?id=${ticketData.id}&_v=${Date.now()}`;
+
+      for (const admin of (admins || [])) {
+        if (admin.phone) {
+          await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: admin.phone, message: waMsg })
+          });
+        }
+      }
+    } catch(_) { /* silencioso */ }
+
+    showToast('Cotización rechazada. Hemos notificado a Focus Store.');
+    setTimeout(() => location.reload(), 2000);
+
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+function showView(v) {
+  document.getElementById('loadingView').style.display    = 'none';
+  document.getElementById('errorView').style.display      = v === 'error'    ? 'block' : 'none';
+  document.getElementById('errorNetView').style.display   = v === 'errorNet' ? 'block' : 'none';
+  document.getElementById('mainView').style.display       = v === 'main'     ? 'block' : 'none';
+}
+
+function fmt(n)     { return Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2 }); }
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function esc(s)     { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' });
+}
+function fmtDateShort(iso) {
+  return new Date(iso).toLocaleDateString('es-HN', { day:'numeric', month:'short' });
+}
+function fmtDateTime(iso) {
+  return new Date(iso).toLocaleString('es-HN', {
+    day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+/* ── Confirmar entrega ───────────────────────────────────────── */
+function openConfirmarEntrega() {
+  document.getElementById('entregaOverlay').style.display = 'flex';
+}
+function closeConfirmarEntrega() {
+  document.getElementById('entregaOverlay').style.display = 'none';
+}
+
+async function confirmarEntrega() {
+  closeConfirmarEntrega();
+  try {
+    const { error } = await sb.from('sp_tickets')
+      .update({ status: 'entregado', delivered_at: new Date().toISOString() })
+      .eq('id', ticketData.id);
+    if (error) throw error;
+
+    const eq   = ticketData.sp_equipment;
+    const name = customerData?.full_name || '';
+    const tNum = ticketData.ticket_number;
+
+    // WhatsApp de agradecimiento al cliente
+    if (customerData?.phone) {
+      try {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: customerData.phone,
+            message: `🎊 *¡Gracias por confiar en Focus Store!*\n\nHola ${name}, hemos registrado la entrega de tu *${eq?.brand || ''} ${eq?.model || ''}*.\n\n🎫 Ticket: #${tNum}\n📅 Entregado: ${new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })}\n\nSi tienes alguna duda o necesitas soporte adicional, no dudes en contactarnos.\n\n¡Hasta pronto! 😊\n*Focus Store Honduras*`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    // Reemplazar banner con mensaje de agradecimiento
+    document.getElementById('confirmarEntregaArea').innerHTML = `
+      <div style="text-align:center;padding:8px 0">
+        <div style="font-size:36px">🎊</div>
+        <p style="font-weight:700;color:#0a0c10;margin:6px 0 4px">¡Gracias por confiar en Focus Store!</p>
+        <p style="font-size:13px;color:#1a5c3a">Equipo entregado el ${new Date().toLocaleDateString('es-HN',{dateStyle:'long'})}</p>
+      </div>`;
+
+    // Actualizar el pill de estado
+    const pill = document.getElementById('statusPill');
+    if (pill) { pill.textContent = '✔ Entregado'; pill.className = 'status-pill pill-verde'; }
+
+    showToast('✅ ¡Entrega confirmada! Gracias por confiar en Focus Store.');
+  } catch (ex) {
+    showToast('⚠️ Error al confirmar: ' + ex.message);
+  }
+}
+
+// ── Anti-cache ────────────────────────────────────────────────
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true); });
+</script>
+</body>
+</html>

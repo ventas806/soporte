@@ -1,0 +1,1079 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solicitud de Soporte · Focus Store</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .header-title h1 { font-size: 15px; font-weight: 700; }
+    .header-title p  { font-size: 12px; color: var(--muted); }
+    .mode-badge {
+      margin-left: auto;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      flex-shrink: 0;
+    }
+    .mode-badge.presencial {
+      background: rgba(46,213,115,.12);
+      color: var(--green);
+      border: 1px solid rgba(46,213,115,.3);
+    }
+    .mode-badge.remoto {
+      background: rgba(61,106,255,.12);
+      color: var(--accent);
+      border: 1px solid rgba(61,106,255,.3);
+    }
+
+    /* ── Progress bar ───────────────────────────────────────── */
+    .progress-track { background: var(--border); height: 3px; }
+    .progress-fill  { background: var(--accent); height: 3px; transition: width .35s ease; }
+
+    /* ── Step indicator ─────────────────────────────────────── */
+    .steps-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 20px 10px;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all .3s;
+      flex-shrink: 0;
+    }
+    .step-dot.active { background: var(--accent); width: 22px; border-radius: 4px; }
+    .step-dot.done   { background: var(--green); }
+    .step-label-text {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── Container ──────────────────────────────────────────── */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* ── Steps ──────────────────────────────────────────────── */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    .step-header { padding: 20px 0 18px; }
+    .step-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .step-header p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Form fields ────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    label .req { color: var(--red); margin-left: 2px; }
+
+    input[type="text"],
+    input[type="tel"],
+    input[type="email"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    input.error, select.error, textarea.error { border-color: var(--red); }
+    textarea { resize: vertical; min-height: 88px; }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892a4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    select option { background: var(--bg3); }
+
+    .field-hint  { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .field-error { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
+    .field-error.show { display: block; }
+
+    /* ── Two-column row ─────────────────────────────────────── */
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 360px) { .row { grid-template-columns: 1fr; } }
+
+    /* ── Condition radio cards ──────────────────────────────── */
+    .radio-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .radio-card { position: relative; }
+    .radio-card input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-card label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 6px;
+      cursor: pointer;
+      transition: all .2s;
+      margin: 0;
+      gap: 5px;
+      text-align: center;
+    }
+    .radio-card input:checked + label {
+      border-color: var(--accent);
+      background: rgba(61,106,255,.1);
+    }
+    .radio-card label .icon { font-size: 22px; }
+    .radio-card label .name { font-size: 12px; font-weight: 600; color: var(--text); }
+
+    /* ── Accessories checkboxes ─────────────────────────────── */
+    .acc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .check-item { position: relative; }
+    .check-item input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+    .check-item label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all .2s;
+      margin: 0;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .check-item input:checked + label {
+      border-color: var(--accent);
+      background: rgba(61,106,255,.1);
+      color: #a0b0ff;
+    }
+    .chk-box {
+      width: 17px; height: 17px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+    }
+    .check-item input:checked + label .chk-box {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .check-item input:checked + label .chk-box::after {
+      content: '✓';
+      font-size: 10px;
+      color: white;
+      font-weight: 700;
+    }
+
+    /* ── Shipping cards ─────────────────────────────────────── */
+    .shipping-list { display: flex; flex-direction: column; gap: 8px; }
+    .ship-card { position: relative; }
+    .ship-card input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+    .ship-card label {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all .2s;
+      margin: 0;
+    }
+    .ship-card input:checked + label {
+      border-color: var(--accent);
+      background: rgba(61,106,255,.07);
+    }
+    .ship-icon { font-size: 26px; flex-shrink: 0; }
+    .ship-info h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .ship-info p  { font-size: 12px; color: var(--muted); }
+
+    /* ── Terms box ──────────────────────────────────────────── */
+    .terms-scroll {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+      max-height: 160px;
+      overflow-y: auto;
+      margin-bottom: 14px;
+    }
+    .terms-check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .terms-check-row:has(input:checked) { border-color: var(--green); }
+    .terms-check-row input[type="checkbox"] {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+    .terms-check-row p { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    /* ── Info card ──────────────────────────────────────────── */
+    .info-card {
+      display: flex;
+      gap: 10px;
+      background: rgba(61,106,255,.07);
+      border: 1px solid rgba(61,106,255,.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .info-card .ic-icon { font-size: 18px; flex-shrink: 0; }
+    .info-card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .info-card p strong { color: var(--text); }
+
+    /* ── Divider ────────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Navigation buttons ─────────────────────────────────── */
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      padding: 24px 0 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .btn-back {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      flex: 0 0 auto;
+      padding: 14px 20px;
+    }
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+    .btn-next { background: var(--accent); color: white; }
+    .btn-next:hover:not(:disabled) { background: #5278ff; transform: translateY(-1px); }
+    .btn-submit { background: var(--green); color: #0a0c10; font-weight: 700; }
+    .btn-submit:hover:not(:disabled) { background: #40e080; transform: translateY(-1px); }
+    .btn:active { transform: none !important; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Alert ──────────────────────────────────────────────── */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+      line-height: 1.4;
+    }
+    .alert.show { display: block; }
+    .alert-error {
+      background: rgba(255,71,87,.1);
+      border: 1px solid rgba(255,71,87,.3);
+      color: var(--red);
+    }
+    .alert-warning {
+      background: rgba(245,200,66,.1);
+      border: 1px solid rgba(245,200,66,.35);
+      color: var(--gold);
+      display: none;
+    }
+    .alert-warning.show { display: block; }
+    .alert-warning strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+    /* ── Loading overlay ────────────────────────────────────── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,12,16,.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      z-index: 999;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--muted); font-size: 14px; }
+
+    /* ── Presencial info banner ─────────────────────────────── */
+    .presencial-banner {
+      background: rgba(46,213,115,.08);
+      border: 1px solid rgba(46,213,115,.25);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .presencial-banner .ic { font-size: 18px; flex-shrink: 0; }
+    .presencial-banner p { font-size: 13px; color: #5ae08a; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p class="loading-text">Registrando su solicitud…</p>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">📷</div>
+  <div class="header-title">
+    <h1>Focus Store</h1>
+    <p>Soporte Técnico</p>
+  </div>
+  <span class="mode-badge remoto" id="modeBadge">🌐 En línea</span>
+</div>
+
+<!-- Progress -->
+<div class="progress-track">
+  <div class="progress-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<div class="container">
+
+  <!-- Step dots -->
+  <div class="steps-bar" id="stepsBar">
+    <!-- rendered by JS -->
+  </div>
+
+  <!-- Global error -->
+  <!-- File-protocol warning (shown when opened via file://) -->
+  <div class="alert alert-warning" id="fileProtocolWarn">
+    <strong>⚠️ Archivo abierto localmente — no puede conectarse a internet</strong>
+    Esta página debe abrirse desde un servidor web (GitHub Pages, Live Server, etc.).<br>
+    Al abrir con <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px">file://</code> el navegador bloquea todas las conexiones externas por seguridad.<br>
+    <span style="margin-top:6px;display:block">👉 Súbelo a GitHub Pages o usa la extensión <strong>Live Server</strong> de VS Code.</span>
+  </div>
+
+  <div class="alert alert-error" id="globalError"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 1 · Datos personales                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="step active" id="step-1">
+    <div class="step-header">
+      <h2>👤 Datos personales</h2>
+      <p>Ingrese su información de contacto para crear la solicitud.</p>
+    </div>
+
+    <div class="field">
+      <label for="fullName">Nombre completo <span class="req">*</span></label>
+      <input type="text" id="fullName" placeholder="Ej: Juan Pérez" autocomplete="name" inputmode="text">
+      <span class="field-error" id="err-fullName">Ingrese su nombre completo.</span>
+    </div>
+
+    <div class="field">
+      <label for="phone">Teléfono <span class="req">*</span></label>
+      <input type="tel" id="phone" placeholder="Ej: 9999-0000" autocomplete="tel" inputmode="tel">
+      <span class="field-error" id="err-phone">Ingrese un número de teléfono.</span>
+    </div>
+
+    <div class="field">
+      <label for="email">Correo electrónico <span style="color:#ff4757">*</span></label>
+      <input type="email" id="email" placeholder="Ej: juan@correo.com" autocomplete="email" inputmode="email">
+      <span class="field-hint">📧 <strong>Este campo es obligatorio.</strong> Le enviaremos notificaciones sobre el estado de su solicitud de soporte: confirmación, cotizaciones y cuando su equipo esté listo.</span>
+      <span class="field-error" id="err-email">Ingrese un correo electrónico válido.</span>
+    </div>
+
+    <div class="field">
+      <label for="identityNumber">N° de identidad / RTN</label>
+      <input type="text" id="identityNumber" placeholder="Opcional">
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 2 · Equipo                                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="step" id="step-2">
+    <div class="step-header">
+      <h2>📷 Equipo</h2>
+      <p>Describa el equipo que necesita servicio técnico.</p>
+    </div>
+
+    <div class="field">
+      <label for="category">Categoría del equipo <span class="req">*</span></label>
+      <select id="category">
+        <option value="">Seleccione una categoría…</option>
+        <option value="camara">📷  Cámaras (DSLR, mirrorless, acción)</option>
+        <option value="lente">🔭  Lentes fotográficos y de video</option>
+        <option value="flash">⚡  Flashes y speedlites</option>
+        <option value="luz">💡  Luces LED y estudio</option>
+        <option value="audio">🎙  Audio (micrófonos, grabadoras)</option>
+        <option value="gimbal">🎬  Gimbals y estabilizadores</option>
+        <option value="drone">🚁  Drones</option>
+        <option value="computadora">💻  Computadoras y laptops</option>
+        <option value="monitor">🖥  Monitores y pantallas</option>
+        <option value="tripode">📸  Trípodes y monopies</option>
+        <option value="otro">🔧  Otro equipo</option>
+      </select>
+      <span class="field-error" id="err-category">Seleccione una categoría.</span>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="brand">Marca <span class="req">*</span></label>
+        <input type="text" id="brand" placeholder="Ej: Sony, Canon…">
+        <span class="field-error" id="err-brand">Ingrese la marca.</span>
+      </div>
+      <div class="field">
+        <label for="model">Modelo <span class="req">*</span></label>
+        <input type="text" id="model" placeholder="Ej: A7 IV, 5D…">
+        <span class="field-error" id="err-model">Ingrese el modelo.</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="serialNumber">N° de serie</label>
+        <input type="text" id="serialNumber" placeholder="Opcional">
+      </div>
+      <div class="field">
+        <label for="equipmentColor">Color</label>
+        <input type="text" id="equipmentColor" placeholder="Ej: Negro">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Condición física del equipo <span class="req">*</span></label>
+      <div class="radio-group">
+        <div class="radio-card">
+          <input type="radio" name="condition" id="cond-bueno" value="bueno" checked>
+          <label for="cond-bueno">
+            <span class="icon">✅</span>
+            <span class="name">Bueno</span>
+          </label>
+        </div>
+        <div class="radio-card">
+          <input type="radio" name="condition" id="cond-regular" value="regular">
+          <label for="cond-regular">
+            <span class="icon">⚠️</span>
+            <span class="name">Regular</span>
+          </label>
+        </div>
+        <div class="radio-card">
+          <input type="radio" name="condition" id="cond-danado" value="dañado">
+          <label for="cond-danado">
+            <span class="icon">🔴</span>
+            <span class="name">Dañado</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Accesorios que incluye con el equipo</label>
+      <div class="acc-grid">
+        <div class="check-item">
+          <input type="checkbox" id="acc-cargador" value="Cargador/Adaptador">
+          <label for="acc-cargador"><span class="chk-box"></span>Cargador</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-bateria" value="Batería">
+          <label for="acc-bateria"><span class="chk-box"></span>Batería</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-estuche" value="Estuche/Bolso">
+          <label for="acc-estuche"><span class="chk-box"></span>Estuche/Bolso</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-cable" value="Cable USB/HDMI">
+          <label for="acc-cable"><span class="chk-box"></span>Cable USB/HDMI</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-memoria" value="Tarjeta de memoria">
+          <label for="acc-memoria"><span class="chk-box"></span>Memoria</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-control" value="Control remoto">
+          <label for="acc-control"><span class="chk-box"></span>Control remoto</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-filtro" value="Filtro(s)">
+          <label for="acc-filtro"><span class="chk-box"></span>Filtro(s)</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="acc-correa" value="Correa/Bandolera">
+          <label for="acc-correa"><span class="chk-box"></span>Correa</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="accessoriesNotes">Notas sobre accesorios</label>
+      <input type="text" id="accessoriesNotes" placeholder="Ej: falta la tapa del lente, incluye 2 baterías…">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label for="reportedFault">Descripción de la falla <span class="req">*</span></label>
+      <textarea id="reportedFault" rows="4"
+        placeholder="Describa con detalle el problema que presenta el equipo. Cuándo comenzó, qué síntomas tiene, si hubo un golpe o caída…"></textarea>
+      <span class="field-error" id="err-fault">Describa la falla del equipo.</span>
+    </div>
+
+    <div class="field">
+      <label for="clientNotes">Notas adicionales</label>
+      <textarea id="clientNotes" rows="2"
+        placeholder="Cualquier información adicional que nos ayude…"></textarea>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO 3 · Envío (solo modo remoto)                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="step" id="step-envio">
+    <div class="step-header">
+      <h2>📦 Envío del equipo</h2>
+      <p>Indíquenos cómo nos hará llegar el equipo.</p>
+    </div>
+
+    <div class="field">
+      <label>¿Cómo enviará el equipo? <span class="req">*</span></label>
+      <div class="shipping-list">
+        <div class="ship-card">
+          <input type="radio" name="shipping" id="ship-presencial" value="presencial">
+          <label for="ship-presencial">
+            <span class="ship-icon">🚶</span>
+            <div class="ship-info">
+              <h4>Lo traeré personalmente</h4>
+              <p>Visitaré la tienda en Plaza Premier para entregar el equipo</p>
+            </div>
+          </label>
+        </div>
+        <div class="ship-card">
+          <input type="radio" name="shipping" id="ship-courier" value="courier">
+          <label for="ship-courier">
+            <span class="ship-icon">📦</span>
+            <div class="ship-info">
+              <h4>Por courier / mensajería</h4>
+              <p>Envío por servicio de entrega a domicilio</p>
+            </div>
+          </label>
+        </div>
+        <div class="ship-card">
+          <input type="radio" name="shipping" id="ship-otro" value="otro">
+          <label for="ship-otro">
+            <span class="ship-icon">🔄</span>
+            <div class="ship-info">
+              <h4>Otro método</h4>
+              <p>Lo coordinaremos directamente con el equipo de soporte</p>
+            </div>
+          </label>
+        </div>
+      </div>
+      <span class="field-error" id="err-shipping">Seleccione un método de envío.</span>
+    </div>
+
+    <!-- Courier details -->
+    <div id="courierDetails" style="display:none">
+      <div class="field">
+        <label for="courierName">Empresa de courier</label>
+        <input type="text" id="courierName" placeholder="Ej: Rapidísimo, DHL, Guatex…">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="trackingNumber">N° de rastreo</label>
+          <input type="text" id="trackingNumber" placeholder="Tracking #">
+        </div>
+        <div class="field">
+          <label for="estimatedArrival">Fecha estimada de llegada</label>
+          <input type="date" id="estimatedArrival">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="shippingNotes">Instrucciones o notas de envío</label>
+      <textarea id="shippingNotes" rows="2"
+        placeholder="Ej: el paquete estará sellado con cinta roja…"></textarea>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PASO FINAL · Términos                                  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="step" id="step-terms">
+    <div class="step-header">
+      <h2>📋 Términos y condiciones</h2>
+      <p>Lea y acepte los términos antes de enviar su solicitud.</p>
+    </div>
+
+    <div id="presencialBanner" class="presencial-banner" style="display:none">
+      <span class="ic">✅</span>
+      <p>Su equipo será recibido directamente en tienda. El ticket quedará registrado con estado <strong>Equipo Recibido</strong>.</p>
+    </div>
+
+    <div class="terms-scroll" id="termsText">
+      Al entregar su equipo acepta nuestra política de servicio. El diagnóstico tiene un costo que se acredita si aprueba la reparación. El cliente tiene 15 días calendario para retirar el equipo una vez notificado. Después se aplicará un costo de almacenamiento diario. El equipo puede ser declarado abandonado si no es retirado en 60 días.
+    </div>
+
+    <div class="info-card">
+      <span class="ic-icon">📌</span>
+      <p>
+        Las cotizaciones tienen validez de <strong>7 días hábiles</strong>.<br>
+        Almacenamiento gratuito por <strong>15 días</strong> después de notificación.<br>
+        Equipo declarado <strong>abandonado</strong> a los 60 días sin retiro.
+      </p>
+    </div>
+
+    <div class="field">
+      <label class="terms-check-row" for="termsAccepted">
+        <input type="checkbox" id="termsAccepted">
+        <p>He leído y acepto los términos y condiciones del servicio de soporte técnico de Focus Store.</p>
+      </label>
+      <span class="field-error" id="err-terms">Debe aceptar los términos para enviar la solicitud.</span>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="nav-buttons" id="navButtons">
+    <button class="btn btn-back" id="btnBack" onclick="prevStep()">← Atrás</button>
+    <button class="btn btn-next" id="btnNext" onclick="nextStep()">Siguiente →</button>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE DETECTION
+═══════════════════════════════════════════════════════════════ */
+const urlParams    = new URLSearchParams(location.search);
+const mode         = urlParams.get('mode');
+const isPresencial = (mode === 'presencial');
+
+// Step IDs per mode
+const STEPS_PRESENCIAL = ['step-1', 'step-2', 'step-terms'];
+const STEPS_REMOTO     = ['step-1', 'step-2', 'step-envio', 'step-terms'];
+const STEP_IDS   = isPresencial ? STEPS_PRESENCIAL : STEPS_REMOTO;
+const STEP_NAMES = isPresencial
+  ? ['Datos personales', 'Equipo', 'Términos']
+  : ['Datos personales', 'Equipo', 'Envío', 'Términos'];
+
+let currentStep = 0;
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+function init() {
+  // ── Detect file:// protocol (CORS will block all Supabase calls) ──
+  if (location.protocol === 'file:') {
+    document.getElementById('fileProtocolWarn').classList.add('show');
+  }
+
+  // Mode badge
+  const badge = document.getElementById('modeBadge');
+  if (isPresencial) {
+    badge.textContent = '📍 En tienda';
+    badge.className   = 'mode-badge presencial';
+    document.getElementById('presencialBanner').style.display = 'flex';
+  }
+
+  // Courier toggle
+  document.querySelectorAll('input[name="shipping"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('courierDetails').style.display =
+        r.value === 'courier' ? 'block' : 'none';
+    });
+  });
+
+  // Load terms
+  loadTerms();
+
+  renderStep();
+}
+
+async function loadTerms() {
+  try {
+    const { data } = await sb.from('sp_settings')
+      .select('value').eq('key', 'terms_text').single();
+    if (data?.value) document.getElementById('termsText').textContent = data.value;
+  } catch (_) { /* keep default */ }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════════ */
+function renderStep() {
+  // Hide all
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  // Show current
+  document.getElementById(STEP_IDS[currentStep]).classList.add('active');
+
+  // Progress %
+  document.getElementById('progressFill').style.width =
+    ((currentStep + 1) / STEP_IDS.length * 100) + '%';
+
+  // Step dots
+  const bar = document.getElementById('stepsBar');
+  bar.innerHTML = STEP_IDS.map((_, i) => {
+    let c = 'step-dot';
+    if (i < currentStep) c += ' done';
+    else if (i === currentStep) c += ' active';
+    return `<span class="${c}" title="${STEP_NAMES[i]}"></span>`;
+  }).join('') +
+  `<span class="step-label-text">Paso ${currentStep + 1} de ${STEP_IDS.length} · ${STEP_NAMES[currentStep]}</span>`;
+
+  // Back button
+  const btnBack = document.getElementById('btnBack');
+  btnBack.style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+
+  // Next / Submit button
+  const btnNext = document.getElementById('btnNext');
+  const isLast  = currentStep === STEP_IDS.length - 1;
+  if (isLast) {
+    btnNext.textContent = '✅ Enviar solicitud';
+    btnNext.className   = 'btn btn-submit';
+    btnNext.onclick     = submitForm;
+  } else {
+    btnNext.textContent = 'Siguiente →';
+    btnNext.className   = 'btn btn-next';
+    btnNext.onclick     = nextStep;
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep() {
+  if (!validateStep()) return;
+  if (currentStep < STEP_IDS.length - 1) { currentStep++; renderStep(); }
+}
+
+function prevStep() {
+  if (currentStep > 0) { currentStep--; renderStep(); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VALIDATION
+═══════════════════════════════════════════════════════════════ */
+function validateStep() {
+  clearErrors();
+  let ok = true;
+  const sid = STEP_IDS[currentStep];
+
+  if (sid === 'step-1') {
+    if (!v('fullName')) { err('fullName', 'err-fullName'); ok = false; }
+    if (!v('phone'))    { err('phone',    'err-phone');    ok = false; }
+    const emailVal = v('email');
+    if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) { err('email', 'err-email'); ok = false; }
+  }
+
+  if (sid === 'step-2') {
+    if (!v('category'))      { err('category',      'err-category'); ok = false; }
+    if (!v('brand'))         { err('brand',         'err-brand');    ok = false; }
+    if (!v('model'))         { err('model',         'err-model');    ok = false; }
+    if (!v('reportedFault')) { err('reportedFault', 'err-fault');    ok = false; }
+  }
+
+  if (sid === 'step-envio') {
+    if (!document.querySelector('input[name="shipping"]:checked')) {
+      document.getElementById('err-shipping').classList.add('show');
+      ok = false;
+    }
+  }
+
+  if (sid === 'step-terms') {
+    if (!document.getElementById('termsAccepted').checked) {
+      document.getElementById('err-terms').classList.add('show');
+      ok = false;
+    }
+  }
+
+  return ok;
+}
+
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+
+function err(fieldId, errId) {
+  document.getElementById(fieldId)?.classList.add('error');
+  document.getElementById(errId)?.classList.add('show');
+}
+
+function clearErrors() {
+  document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
+  document.getElementById('globalError').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUBMIT
+═══════════════════════════════════════════════════════════════ */
+async function submitForm() {
+  if (!validateStep()) return;
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('btnNext').disabled = true;
+
+  try {
+    // 1 ── Insert customer ──────────────────────────────────────
+    const { data: customer, error: custErr } = await sb
+      .from('sp_customers')
+      .insert({
+        full_name:       v('fullName'),
+        phone:           v('phone'),
+        email:           v('email') || null,
+        identity_number: v('identityNumber') || null
+      })
+      .select('id')
+      .single();
+
+    if (custErr) throw custErr;
+
+    // 2 ── Accessories ──────────────────────────────────────────
+    const accessories = [];
+    document.querySelectorAll('input[id^="acc-"]').forEach(cb => {
+      if (cb.checked) accessories.push(cb.value);
+    });
+
+    // 3 ── Insert equipment ─────────────────────────────────────
+    const { data: equipment, error: eqErr } = await sb
+      .from('sp_equipment')
+      .insert({
+        customer_id:        customer.id,
+        category:           v('category'),
+        brand:              v('brand'),
+        model:              v('model'),
+        serial_number:      v('serialNumber') || null,
+        color:              v('equipmentColor') || null,
+        physical_condition: document.querySelector('input[name="condition"]:checked')?.value || 'bueno',
+        accessories:        accessories.length ? accessories : null,
+        accessories_notes:  v('accessoriesNotes') || null
+      })
+      .select('id')
+      .single();
+
+    if (eqErr) throw eqErr;
+
+    // 4 ── Shipping data (remoto only) ──────────────────────────
+    let shippingMethod = null, courierName = null, trackingNum = null,
+        estimatedArr = null, shipNotes = null;
+
+    if (!isPresencial) {
+      const shipEl  = document.querySelector('input[name="shipping"]:checked');
+      shippingMethod = shipEl?.value || null;
+      courierName   = v('courierName') || null;
+      trackingNum   = v('trackingNumber') || null;
+      estimatedArr  = v('estimatedArrival') || null;
+      shipNotes     = v('shippingNotes') || null;
+    }
+
+    // 5 ── Build ticket payload ─────────────────────────────────
+    const ticketPayload = {
+      customer_id:          customer.id,
+      equipment_id:         equipment.id,
+      ticket_origin:        isPresencial ? 'cliente_presencial' : 'cliente_remoto',
+      equipment_on_arrival: isPresencial,
+      reported_fault:       v('reportedFault'),
+      client_notes:         v('clientNotes') || null,
+      terms_accepted:       true,
+      terms_accepted_at:    new Date().toISOString(),
+      shipping_method:      shippingMethod,
+      courier_name:         courierName,
+      tracking_number:      trackingNum,
+      estimated_arrival:    estimatedArr,
+      shipping_notes:       shipNotes
+    };
+
+    // Auto-set equipo_en_camino if courier + has tracking
+    if (!isPresencial && shippingMethod === 'courier' && trackingNum) {
+      ticketPayload.status = 'equipo_en_camino';
+    }
+
+    // 6 ── Insert ticket ────────────────────────────────────────
+    const { data: ticket, error: tktErr } = await sb
+      .from('sp_tickets')
+      .insert(ticketPayload)
+      .select('id, ticket_number, access_token')
+      .single();
+
+    if (tktErr) throw tktErr;
+
+    // 7 ── Notificar al cliente (email + WhatsApp) ─────────────
+    const clientName  = v('fullName');
+    const clientEmail = v('email');
+    const clientPhone = v('phone');
+    const portalLink  = `https://soporte.focusstore.net/portal.html?token=${ticket.access_token}`;
+    const tNum        = ticket.ticket_number;
+
+    const waMsg = `👋 *¡Hola ${clientName}!*\n\nTu solicitud de soporte técnico fue registrada exitosamente en *Focus Store*.\n\n🎫 *Ticket:* #${tNum}\n\nPuedes dar seguimiento a tu equipo en cualquier momento desde el siguiente enlace:\n🔗 ${portalLink}\n\n¡Estamos trabajando para ayudarte! 🙏\n*Focus Store Honduras*`;
+
+    if (clientPhone) {
+      try {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: clientPhone, message: waMsg })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    if (clientEmail) {
+      try {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'ticket_created',
+            clientName, clientEmail,
+            ticketNumber: tNum,
+            deviceBrand: v('brand') || '',
+            deviceModel: v('model') || '',
+            portalToken: ticket.access_token
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    // 8 ── Redirect to confirmation ─────────────────────────────
+    const q = new URLSearchParams({
+      ticket: ticket.ticket_number,
+      token:  ticket.access_token,
+      mode:   isPresencial ? 'presencial' : 'remoto'
+    });
+    location.href = 'confirmacion.html?' + q.toString();
+
+  } catch (ex) {
+    console.error('Error al enviar solicitud:', ex);
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('btnNext').disabled = false;
+
+    const errEl = document.getElementById('globalError');
+
+    // Distinguish network/CORS errors from Supabase API errors
+    let msg;
+    if (ex instanceof TypeError && ex.message.toLowerCase().includes('fetch')) {
+      if (location.protocol === 'file:') {
+        msg = '🚫 No se puede conectar: esta página está abierta como archivo local (file://). ' +
+              'Debe accederse desde un servidor web (GitHub Pages, Live Server, etc.).';
+      } else {
+        msg = '🌐 Sin conexión a internet. Verifique su red e intente de nuevo.';
+      }
+    } else {
+      msg = '⚠️ Error al registrar: ' + (ex?.message || ex?.error_description || 'Ocurrió un problema. Por favor intente de nuevo.');
+    }
+
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+/* ── START ──────────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>

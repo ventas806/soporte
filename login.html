@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso Staff · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    /* ── Logo ───────────────────────────────────────────────── */
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 32px rgba(61,106,255,.3);
+    }
+    .logo-wrap h1 { font-size: 22px; font-weight: 800; }
+    .logo-wrap p  { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 24px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Fields ─────────────────────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 7px;
+    }
+    input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 16px;
+      padding: 13px 14px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    input:focus { border-color: var(--accent); }
+    input.error { border-color: var(--red); }
+    input[type="password"] { letter-spacing: 3px; font-size: 20px; }
+
+    /* PIN pad */
+    .pin-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pin-wrap input {
+      flex: 1;
+      text-align: center;
+      letter-spacing: 6px;
+      font-size: 22px;
+      padding: 13px 10px;
+    }
+    .pin-toggle {
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 18px;
+      width: 48px; height: 49px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+    .pin-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Error ──────────────────────────────────────────────── */
+    .error-msg {
+      background: rgba(255,71,87,.1);
+      border: 1px solid rgba(255,71,87,.25);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--red);
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* file:// protocol warning */
+    .proto-warn {
+      background: rgba(245,200,66,.1);
+      border: 1px solid rgba(245,200,66,.35);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #f5c842;
+      margin-bottom: 14px;
+      display: none;
+      line-height: 1.5;
+    }
+    .proto-warn.show { display: block; }
+
+    /* ── Button ─────────────────────────────────────────────── */
+    .btn-login {
+      width: 100%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-login:hover:not(:disabled) { background: #5278ff; transform: translateY(-1px); }
+    .btn-login:active               { transform: none; }
+    .btn-login:disabled             { opacity: .55; cursor: not-allowed; }
+
+    /* Spinner inside button */
+    .btn-spin {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-login.loading .btn-spin  { display: inline-block; }
+    .btn-login.loading .btn-text  { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── User preview ────────────────────────────────────────── */
+    .user-preview {
+      display: none;
+      background: rgba(61,106,255,.08);
+      border: 1px solid rgba(61,106,255,.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-preview.show { display: flex; }
+    .user-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .user-preview-info h4 { font-size: 14px; font-weight: 600; }
+    .user-preview-info p  { font-size: 11px; color: var(--muted); }
+
+    .role-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .role-admin      { background: rgba(245,200,66,.15); color: #f5c842; }
+    .role-supervisor { background: rgba(255,159,67,.15); color: #ff9f43; }
+    .role-recepcion  { background: rgba(61,106,255,.15); color: #7090ff; }
+    .role-tecnico    { background: rgba(46,213,115,.15); color: #2ed573; }
+    .role-auditor    { background: rgba(136,146,164,.15); color: #8892a4; }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <div class="logo-icon">📷</div>
+    <h1>Focus Store</h1>
+    <p>Sistema de Soporte Técnico</p>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+    <div class="card-title">🔐 Acceso del personal</div>
+
+    <!-- file:// warning -->
+    <div class="proto-warn" id="protoWarn">
+      ⚠️ <strong>Archivo local detectado.</strong> Esta página debe abrirse desde un servidor web (GitHub Pages, Live Server). Abrir con <code style="background:rgba(0,0,0,.3);padding:0 4px;border-radius:3px">file://</code> bloquea la conexión a Supabase.
+    </div>
+
+    <!-- Error message -->
+    <div class="error-msg" id="errMsg">Usuario o PIN incorrecto.</div>
+
+    <!-- User preview (shown after username lookup) -->
+    <div class="user-preview" id="userPreview">
+      <div class="user-avatar" id="prevAvatar">?</div>
+      <div class="user-preview-info">
+        <h4 id="prevName">—</h4>
+        <p><span class="role-badge" id="prevRole">—</span></p>
+      </div>
+    </div>
+
+    <!-- Username -->
+    <div class="field">
+      <label for="username">Usuario</label>
+      <input type="text"
+             id="username"
+             placeholder="Ej: Billy.Estrada"
+             autocomplete="username"
+             autocapitalize="none"
+             spellcheck="false"
+             oninput="onUsernameInput()">
+    </div>
+
+    <!-- PIN -->
+    <div class="field">
+      <label for="pin">PIN de acceso</label>
+      <div class="pin-wrap">
+        <input type="password"
+               id="pin"
+               placeholder="••••"
+               maxlength="8"
+               autocomplete="current-password"
+               inputmode="numeric"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="pin-toggle" onclick="togglePin()" type="button" id="pinToggle">👁</button>
+      </div>
+    </div>
+
+    <!-- Button -->
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">
+      <div class="btn-spin"></div>
+      <span class="btn-text">Ingresar →</span>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>¿Es cliente? <a href="ingreso.html">Registre su equipo aquí</a></p>
+    <p style="margin-top:6px">Focus Store · Plaza Premier, 2do nivel · Tegucigalpa</p>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ROLE_LABELS = {
+  admin: 'Administrador', supervisor: 'Supervisor',
+  recepcion: 'Recepción', tecnico: 'Técnico', auditor: 'Auditor'
+};
+
+let lookupTimer = null;
+
+/* ── Already logged in? ─────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  // Detect file:// — Supabase calls will fail with CORS
+  if (location.protocol === 'file:') {
+    document.getElementById('protoWarn').classList.add('show');
+  }
+  const sess = getSession();
+  if (sess) redirectByRole(sess.role);
+  document.getElementById('username').focus();
+});
+
+/* ── Username lookup (debounced) ────────────────────────────── */
+function onUsernameInput() {
+  const preview = document.getElementById('userPreview');
+  preview.classList.remove('show');
+  clearTimeout(lookupTimer);
+  const u = document.getElementById('username').value.trim();
+  if (u.length < 2) return;
+  lookupTimer = setTimeout(() => lookupUser(u), 500);
+}
+
+async function lookupUser(username) {
+  try {
+    const { data } = await sb.from('sp_profiles')
+      .select('full_name, role, color, avatar, is_active')
+      .eq('username', username)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const prev     = document.getElementById('userPreview');
+    const avatar   = document.getElementById('prevAvatar');
+    const name     = document.getElementById('prevName');
+    const roleBadge= document.getElementById('prevRole');
+
+    avatar.textContent      = data.avatar || data.full_name[0];
+    avatar.style.background = (data.color || '#3d6aff') + '33';
+    avatar.style.color      = data.color || '#3d6aff';
+    name.textContent        = data.full_name;
+    roleBadge.textContent   = ROLE_LABELS[data.role] || data.role;
+    roleBadge.className     = 'role-badge role-' + data.role;
+    prev.classList.add('show');
+
+    document.getElementById('pin').focus();
+  } catch (_) {}
+}
+
+/* ── Toggle PIN visibility ──────────────────────────────────── */
+function togglePin() {
+  const pin = document.getElementById('pin');
+  const tog = document.getElementById('pinToggle');
+  if (pin.type === 'password') { pin.type = 'text';     tog.textContent = '🙈'; }
+  else                         { pin.type = 'password'; tog.textContent = '👁'; }
+  pin.focus();
+}
+
+/* ── Login ──────────────────────────────────────────────────── */
+async function doLogin() {
+  const username = document.getElementById('username').value.trim();
+  const pin      = document.getElementById('pin').value.trim();
+  const errEl    = document.getElementById('errMsg');
+  const btnEl    = document.getElementById('btnLogin');
+
+  errEl.classList.remove('show');
+  document.getElementById('username').classList.remove('error');
+  document.getElementById('pin').classList.remove('error');
+
+  if (!username || !pin) {
+    errEl.textContent = 'Ingrese su usuario y PIN.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  // Loading state
+  btnEl.disabled = true;
+  btnEl.classList.add('loading');
+
+  try {
+    const { data, error } = await sb.from('sp_profiles')
+      .select('id, full_name, username, role, color, avatar, is_active, app_pin')
+      .eq('username', username)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data || data.app_pin !== pin) {
+      errEl.textContent = 'Usuario o PIN incorrecto.';
+      errEl.classList.add('show');
+      document.getElementById('pin').classList.add('error');
+      document.getElementById('pin').value = '';
+      document.getElementById('pin').focus();
+      return;
+    }
+
+    // Update last login
+    await sb.from('sp_profiles')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', data.id);
+
+    // Store session
+    const session = {
+      id: data.id, username: data.username,
+      full_name: data.full_name, role: data.role,
+      color: data.color, avatar: data.avatar,
+      logged_in_at: Date.now()
+    };
+    localStorage.setItem('sp_session', JSON.stringify(session));
+
+    // Redirect
+    redirectByRole(data.role);
+
+  } catch (ex) {
+    console.error(ex);
+    if (ex instanceof TypeError && ex.message.toLowerCase().includes('fetch')) {
+      errEl.textContent = location.protocol === 'file:'
+        ? '🚫 Archivo local (file://) — abra esta página desde GitHub Pages o un servidor web.'
+        : '🌐 Sin conexión. Verifique su internet e intente de nuevo.';
+    } else {
+      errEl.textContent = 'Error de conexión. Intente de nuevo.';
+    }
+    errEl.classList.add('show');
+  } finally {
+    btnEl.disabled = false;
+    btnEl.classList.remove('loading');
+  }
+}
+
+/* ── Route by role ──────────────────────────────────────────── */
+function redirectByRole(role) {
+  const base = location.pathname.replace('login.html', '');
+  switch (role) {
+    case 'tecnico':
+      location.href = base + 'tecnico/index.html';
+      break;
+    case 'admin':
+    case 'supervisor':
+    case 'recepcion':
+    case 'auditor':
+    default:
+      location.href = base + 'recepcion/index.html';
+      break;
+  }
+}
+
+/* ── Session helpers ────────────────────────────────────────── */
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    // Session expires after 12 hours
+    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) {
+      localStorage.removeItem('sp_session');
+      return null;
+    }
+    return s;
+  } catch (_) { return null; }
+}
+</script>
+</body>
+</html>

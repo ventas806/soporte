@@ -1,0 +1,2415 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+      --orange: #ff9f43;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────── */
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .btn-back {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+    .topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
+    .topbar-num {
+      font-size: 13px;
+      color: var(--accent);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-weight: 700;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .page { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .card-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+    .card-body { padding: 16px 18px; }
+
+    /* ── Status header ──────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .big-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .pill-azul    { background: rgba(61,106,255,.15);  color: #7090ff; border: 1px solid rgba(61,106,255,.3); }
+    .pill-verde   { background: rgba(46,213,115,.15);  color: var(--green); border: 1px solid rgba(46,213,115,.3); }
+    .pill-dorado  { background: rgba(245,200,66,.15);  color: var(--gold);  border: 1px solid rgba(245,200,66,.3); }
+    .pill-naranja { background: rgba(255,159,67,.15);  color: var(--orange); border: 1px solid rgba(255,159,67,.3); }
+    .pill-rojo    { background: rgba(255,71,87,.15);   color: var(--red);   border: 1px solid rgba(255,71,87,.3); }
+    .pill-gris    { background: rgba(136,146,164,.1);  color: var(--muted); border: 1px solid rgba(136,146,164,.25); }
+
+    /* ── Info rows ──────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 500px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .info-item { }
+    .info-item .lbl { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .info-item .val { font-size: 14px; font-weight: 500; }
+    .info-item .val.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* ── Timeline ───────────────────────────────────────────── */
+    .tl { padding: 12px 0; }
+    .tl-item {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 14px;
+      position: relative;
+    }
+    .tl-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 9px; top: 22px;
+      width: 2px; bottom: 0;
+      background: var(--border);
+    }
+    .tl-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      position: relative; z-index: 1;
+    }
+    .tl-dot.done    { background: var(--green); color: #0a0c10; }
+    .tl-dot.current { background: var(--accent); color: white; box-shadow: 0 0 0 3px rgba(61,106,255,.2); }
+    .tl-dot.pending { background: var(--border); color: var(--muted); }
+    .tl-content h4  { font-size: 13px; font-weight: 600; }
+    .tl-content p   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Messages ───────────────────────────────────────────── */
+    .messages { padding: 10px 4px; display: flex; flex-direction: column; gap: 10px; }
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-width: 90%;
+    }
+    .msg.staff  { align-self: flex-start; }
+    .msg.client { align-self: flex-end; }
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .msg.staff  .msg-bubble { background: var(--bg3); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg.client .msg-bubble { background: rgba(61,106,255,.12); border: 1px solid rgba(61,106,255,.2); border-bottom-right-radius: 4px; }
+    .msg.system .msg-bubble { background: var(--bg3); border: 1px dashed var(--border); font-style: italic; color: var(--muted); font-size: 12px; }
+    .msg-meta { font-size: 10px; color: var(--muted); }
+    .msg.client .msg-meta { text-align: right; }
+
+    /* ── Notes (internal) ───────────────────────────────────── */
+    .note-item {
+      background: var(--bg3);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+    }
+    .note-item p   { font-size: 13px; line-height: 1.5; }
+    .note-item .nm { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Action selects / buttons ───────────────────────────── */
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    select, input[type="text"], textarea {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .2s;
+      width: 100%;
+    }
+    select { cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+    }
+    select option { background: var(--bg3); }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    .field { margin-bottom: 10px; }
+    .field-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+
+    .btn {
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-primary   { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #5278ff; }
+    .btn-green     { background: var(--green); color: #0a0c10; }
+    .btn-green:hover { background: #40e080; }
+    .btn-ghost     { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); }
+    .btn-full      { width: 100%; padding: 12px; font-size: 14px; }
+    .btn:disabled  { opacity: .5; cursor: not-allowed; }
+    /* ── Loading spinner ─────────────────────────────────── */
+    @keyframes _spin { to { transform: rotate(360deg); } }
+    .btn-spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,.35); border-top-color: currentColor;
+      border-radius: 50%; animation: _spin .7s linear infinite;
+      vertical-align: middle; margin-right: 7px;
+    }
+    .btn-loading { opacity: .75 !important; cursor: not-allowed !important; pointer-events: none; }
+
+    /* ── Equip badge ────────────────────────────────────────── */
+    .equip-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .equip-icon { font-size: 28px; }
+    .equip-info h3 { font-size: 15px; font-weight: 700; }
+    .equip-info p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Customer card ──────────────────────────────────────── */
+    .cust-field { display: flex; gap: 8px; margin-bottom: 10px; }
+    .cust-field .ci { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .cust-field .cv h4 { font-size: 13px; font-weight: 500; }
+    .cust-field .cv p  { font-size: 11px; color: var(--muted); }
+
+    /* ── Accessories ────────────────────────────────────────── */
+    .acc-pill {
+      display: inline-block;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3px 10px;
+      font-size: 11px;
+      margin: 2px;
+      color: var(--muted);
+    }
+
+    /* ── Loading / Error ────────────────────────────────────── */
+    .full-center {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 80px 20px; text-align: center;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Quote sections ─────────────────────────────────────── */
+    .quote-status {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    }
+    .qs-pendiente { background:rgba(245,200,66,.15); color:var(--gold); border:1px solid rgba(245,200,66,.3); }
+    .qs-aprobada  { background:rgba(46,213,115,.15); color:var(--green); border:1px solid rgba(46,213,115,.3); }
+    .qs-rechazada { background:rgba(255,71,87,.15); color:var(--red); border:1px solid rgba(255,71,87,.3); }
+    .qs-vencida   { background:rgba(136,146,164,.15); color:var(--muted); border:1px solid rgba(136,146,164,.3); }
+    .qs-borrador  { background:rgba(61,106,255,.1); color:#7090ff; border:1px solid rgba(61,106,255,.2); }
+
+    /* Quote line items */
+    .qi-table { width:100%; border-collapse:collapse; font-size:13px; margin:10px 0; }
+    .qi-table thead th { font-size:10px; font-weight:700; text-transform:uppercase;
+      color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; }
+    .qi-table tbody td { padding:8px 8px; border-bottom:1px solid rgba(42,47,63,.5); vertical-align:middle; }
+    .qi-table tbody tr:last-child td { border-bottom:none; }
+    .qi-desc { min-width:140px; }
+    .qi-cat  { font-size:10px; color:var(--muted); }
+    .qi-num  { text-align:right; font-family:'SF Mono','Fira Code',monospace; white-space:nowrap; }
+    .qi-total-section { border-top:1px solid var(--border); padding-top:10px; margin-top:6px; }
+    .qi-total-row { display:flex; justify-content:space-between; font-size:13px;
+      color:var(--muted); padding:3px 0; }
+    .qi-total-row.main { font-size:16px; font-weight:800; color:var(--text); padding-top:6px; }
+    .qi-total-row.main .mono { color:var(--green); }
+
+    /* Line item builder (editable) */
+    .qi-build-row { display:grid; grid-template-columns:1fr 60px 110px 32px; gap:6px; align-items:center; margin-bottom:6px; }
+    .qi-build-row input, .qi-build-row select {
+      background:var(--bg); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:12px; padding:7px 9px; outline:none; font-family:inherit;
+      width:100%; transition:border-color .2s;
+    }
+    .qi-build-row input:focus, .qi-build-row select:focus { border-color:var(--accent); }
+    .qi-del-btn { background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); width:32px; height:32px; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; font-size:14px; transition:all .2s; }
+    .qi-del-btn:hover { color:var(--red); border-color:var(--red); }
+
+    .quote-live-total { background:var(--bg); border:1px solid var(--border); border-radius:10px;
+      padding:12px 16px; margin:12px 0; display:flex; justify-content:space-between; align-items:center;
+      flex-wrap:wrap; gap:10px; }
+    .qlt-item { text-align:center; }
+    .qlt-label { font-size:10px; color:var(--muted); margin-bottom:2px; }
+    .qlt-val   { font-size:16px; font-weight:800; font-family:'SF Mono','Fira Code',monospace; }
+    .qlt-val.tec { color:var(--orange); }
+    .qlt-val.cli { color:var(--green); }
+    .qlt-val.isv { color:var(--muted); }
+
+    /* Rejection reason box */
+    .rejection-box { background:rgba(255,71,87,.08); border:1px solid rgba(255,71,87,.2);
+      border-radius:8px; padding:10px 12px; margin-top:8px; font-size:12px; color:var(--red); }
+
+    .btn-danger  { background:var(--red); color:white; }
+    .btn-danger:hover { background:#ff6b78; }
+    .btn-success { background:var(--green); color:#0a0c10; }
+    .btn-success:hover { background:#40e080; }
+
+    /* Catalog modal */
+    .cat-modal-overlay { position:fixed; inset:0; background:rgba(10,12,16,.85);
+      display:none; align-items:center; justify-content:center; z-index:110; padding:20px; }
+    .cat-modal-overlay.show { display:flex; }
+    .cat-modal { background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+      width:100%; max-width:560px; max-height:85vh; display:flex; flex-direction:column;
+      box-shadow:0 24px 80px rgba(0,0,0,.6); }
+    .cat-modal-header { padding:16px 20px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:10px; }
+    .cat-modal-header h3 { font-size:15px; font-weight:700; flex:1; }
+    .cat-modal-body { flex:1; overflow-y:auto; padding:12px; }
+    .cat-item { display:flex; align-items:center; gap:12px; padding:10px 12px;
+      border-radius:10px; cursor:pointer; transition:background .15s; border:1.5px solid transparent; }
+    .cat-item:hover { background:rgba(61,106,255,.08); border-color:rgba(61,106,255,.2); }
+    .cat-item-info { flex:1; }
+    .cat-item-name { font-size:13px; font-weight:600; }
+    .cat-item-cat  { font-size:10px; color:var(--muted); margin-top:1px; }
+    .cat-item-prices { text-align:right; }
+    .cat-item-tec { font-size:11px; color:var(--orange); font-weight:700; }
+    .cat-item-cli { font-size:11px; color:var(--green); font-weight:700; }
+
+    /* Reject reason modal */
+    .reject-overlay { position:fixed; inset:0; background:rgba(10,12,16,.85);
+      display:none; align-items:center; justify-content:center; z-index:120; padding:20px; }
+    .reject-overlay.show { display:flex; }
+    .reject-box { background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+      width:100%; max-width:400px; padding:24px; }
+    .reject-box h3 { font-size:15px; font-weight:700; margin-bottom:12px; }
+    .reject-box textarea { width:100%; background:var(--bg3); border:1.5px solid var(--border);
+      border-radius:10px; color:var(--text); font-size:13px; padding:10px 12px; outline:none;
+      font-family:inherit; resize:vertical; min-height:80px; transition:border-color .2s; }
+    .reject-box textarea:focus { border-color:var(--red); }
+    .reject-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+
+    /* ── Portal link ────────────────────────────────────────── */
+    .portal-link-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+      font-family: 'SF Mono', monospace;
+      cursor: pointer;
+    }
+    .portal-link-box:hover { border-color: var(--accent); }
+
+    /* ── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 18px;
+      font-size: 13px; color: var(--green);
+      transition: transform .3s;
+      pointer-events: none; z-index: 200;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingView" class="full-center">
+  <div class="spinner"></div>
+  <p style="color:var(--muted)">Cargando ticket…</p>
+</div>
+
+<!-- Error -->
+<div id="errorView" style="display:none" class="full-center">
+  <p style="font-size:36px;margin-bottom:12px">⚠️</p>
+  <p style="color:var(--muted)">Ticket no encontrado.</p>
+  <a href="index.html" style="color:var(--accent);margin-top:12px">← Volver al dashboard</a>
+</div>
+
+<!-- Main -->
+<div id="mainView" style="display:none">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <a href="index.html" class="btn-back" onclick="this.href='index.html?_v='+Date.now()">← Volver</a>
+    <div class="topbar-title">Detalle del Ticket</div>
+    <div class="topbar-num" id="topNum">—</div>
+  </div>
+
+  <!-- ── Próximo Paso Banner ──────────────────────────────────── -->
+  <div id="nextStepBanner" style="display:none;margin:12px 16px 0;background:rgba(61,106,255,.08);border:1px solid rgba(61,106,255,.3);border-radius:12px;padding:14px 18px;display:none;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent)">⚡ Próximo paso recomendado</div>
+        <div id="nextStepTimer" style="display:none;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.08);color:#f5c842;white-space:nowrap"></div>
+      </div>
+      <div id="nextStepText" style="font-size:14px;color:var(--text);font-weight:600"></div>
+    </div>
+    <button id="nextStepBtn" onclick="doNextStep()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap"></button>
+  </div>
+
+  <div class="page">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- ── Ticket summary ────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Información del Ticket</h3>
+          <div id="statusPill" class="big-status pill-azul">—</div>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item"><div class="lbl">N° de ticket</div><div class="val mono" id="iTicketNum">—</div></div>
+            <div class="info-item"><div class="lbl">Fecha de registro</div><div class="val" id="iDate">—</div></div>
+            <div class="info-item"><div class="lbl">Origen</div><div class="val" id="iOrigin">—</div></div>
+            <div class="info-item"><div class="lbl">Técnico asignado</div><div class="val" id="iTech">Sin asignar</div></div>
+          </div>
+          <div class="divider"></div>
+          <div class="field-label">Falla reportada</div>
+          <p style="font-size:14px;line-height:1.6;color:var(--text)" id="iFault">—</p>
+          <div id="iNotasWrap" style="display:none;margin-top:10px">
+            <div class="field-label">Notas del cliente</div>
+            <p style="font-size:13px;line-height:1.5;color:var(--muted)" id="iNotas">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Status timeline ───────────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Historial de estado</h3>
+          <span style="font-size:12px;color:var(--muted)" id="histCount">0 cambios</span>
+        </div>
+        <div class="card-body">
+          <div class="tl" id="tlContent">—</div>
+        </div>
+      </div>
+
+      <!-- ── Messages (visible to client) ─────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Mensajes al cliente</h3>
+          <span style="font-size:11px;color:var(--green)">👁 Visibles al cliente</span>
+        </div>
+        <div class="card-body">
+          <div class="messages" id="msgList">
+            <p style="font-size:13px;color:var(--muted);text-align:center">Sin mensajes aún.</p>
+          </div>
+          <div class="divider"></div>
+          <div class="field">
+            <div class="field-label">Agregar mensaje al cliente</div>
+            <textarea id="newMsg" placeholder="Escriba un mensaje que verá el cliente en su portal…" rows="2"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendMessage()">Enviar mensaje</button>
+        </div>
+      </div>
+
+      <!-- ── Internal notes ────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Notas internas</h3>
+          <span style="font-size:11px;color:var(--red)">🔒 Solo staff</span>
+        </div>
+        <div class="card-body">
+          <div id="notesList">
+            <p style="font-size:13px;color:var(--muted)">Sin notas internas.</p>
+          </div>
+          <div class="divider"></div>
+          <div class="field">
+            <div class="field-label">Agregar nota interna</div>
+            <textarea id="newNote" placeholder="Notas privadas del equipo de soporte…" rows="2"></textarea>
+          </div>
+          <button class="btn btn-ghost" onclick="addNote()">Agregar nota</button>
+        </div>
+      </div>
+
+      <!-- ── Cotización del técnico (interna) ──────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🔧 Cotización del Técnico</h3>
+          <span style="font-size:11px;color:var(--orange)">Técnico → Focus Store</span>
+        </div>
+        <div class="card-body" id="quoteIntBody">
+          <p style="font-size:13px;color:var(--muted)">Cargando…</p>
+        </div>
+      </div>
+
+      <!-- ── Cotización al cliente ──────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📋 Cotización al Cliente</h3>
+          <span style="font-size:11px;color:var(--green)">Focus Store → Cliente</span>
+        </div>
+        <div class="card-body" id="quoteCliBody">
+          <p style="font-size:13px;color:var(--muted)">Cargando…</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+
+      <!-- ── Actions ───────────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><h3>Acciones</h3></div>
+        <div class="card-body">
+
+          <div class="field">
+            <div class="field-label">Cambiar estado</div>
+            <select id="statusSelect" onchange="onStatusChange()">
+              <option value="">Seleccione nuevo estado…</option>
+              <option value="solicitud_recibida">📝 Solicitud recibida</option>
+              <option value="equipo_en_camino">🚚 Equipo en camino</option>
+              <option value="equipo_recibido">📬 Equipo recibido</option>
+              <option value="en_diagnostico">🔍 En diagnóstico</option>
+              <option value="esperando_aprobacion">⚡ Esperando aprobación</option>
+              <option value="aprobado_reparacion">✅ Reparación aprobada</option>
+              <option value="esperando_repuesto">📦 Esperando repuesto</option>
+              <option value="en_reparacion">🔧 En reparación</option>
+              <option value="en_pruebas">🧪 En pruebas</option>
+              <option value="listo_para_entrega">🎉 Listo para entrega</option>
+              <option value="entregado">✔ Entregado</option>
+              <option value="cerrado">🔒 Cerrado</option>
+              <option value="cancelado">✗ Cancelado</option>
+              <option value="irreparable">⛔ No reparable</option>
+              <option value="abandonado">⚠️ Abandonado</option>
+            </select>
+          </div>
+
+          <div class="field" id="partsField" style="display:none">
+            <div class="field-label">⏳ Días estimados para el repuesto <span style="color:var(--red)">*</span></div>
+            <input type="number" id="partsDays" min="1" max="90" placeholder="Ej: 7">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">📅 El cliente recibirá notificación con la fecha estimada de llegada.</div>
+          </div>
+
+          <div class="field" id="repairField" style="display:none">
+            <div class="field-label">🔧 Días estimados de reparación <span style="color:var(--red)">*</span></div>
+            <input type="number" id="repairDays" min="1" max="90" placeholder="Ej: 3">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">📅 El cliente recibirá notificación con la fecha estimada de entrega.</div>
+          </div>
+
+          <div class="field" id="testingField" style="display:none">
+            <div class="field-label">🧪 Días estimados de pruebas <span style="color:var(--red)">*</span></div>
+            <input type="number" id="testingDays" min="1" max="30" placeholder="Ej: 1">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">📅 El cliente recibirá notificación con la fecha estimada de finalización.</div>
+          </div>
+
+          <div class="field" id="statusNoteField" style="display:none">
+            <div class="field-label">Comentario de estado (opcional)</div>
+            <input type="text" id="statusNote" placeholder="Ej: Recibido el equipo, inicia diagnóstico…">
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="changeStatus(this)">Actualizar estado</button>
+
+          <div class="divider"></div>
+
+          <div class="field">
+            <div class="field-label">Asignar técnico</div>
+            <select id="techSelect">
+              <option value="">Sin asignar</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-full" onclick="assignTech(this)">Guardar asignación</button>
+
+          <div class="divider"></div>
+
+          <div class="field-label" style="margin-bottom:8px">Enlace del cliente</div>
+          <div class="portal-link-box" id="portalLinkBox" onclick="copyPortalLink()">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Clic para copiar</div>
+
+          <div class="divider" id="deleteSection" style="display:none"></div>
+          <button id="btnDeleteTicket" class="btn btn-danger btn-full" style="display:none;margin-top:4px"
+            onclick="confirmDeleteTicket()">🗑️ Eliminar ticket</button>
+          <script>(function(){try{var s=JSON.parse(localStorage.getItem('sp_session')||'null');if(s&&s.role==='admin'){document.getElementById('btnDeleteTicket').style.display='block';document.getElementById('deleteSection').style.display='block';}}catch(_){}})();</script>
+
+        </div>
+      </div>
+
+      <!-- ── Fecha límite de diagnóstico ──────────────────── -->
+      <div class="card" id="diagnosisDeadlineCard" style="display:none;padding:16px"></div>
+
+      <!-- ── Fecha límite de reparación ────────────────────── -->
+      <div class="card" id="deadlineCard" style="display:none;padding:16px"></div>
+
+      <!-- ── Customer info ─────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><h3>Cliente</h3></div>
+        <div class="card-body">
+          <div class="cust-field">
+            <span class="ci">👤</span>
+            <div class="cv"><h4 id="cName">—</h4><p>Nombre</p></div>
+          </div>
+          <div class="cust-field">
+            <span class="ci">📞</span>
+            <div class="cv"><h4 id="cPhone">—</h4><p>Teléfono</p></div>
+          </div>
+          <div class="cust-field" id="cEmailRow" style="display:none">
+            <span class="ci">📧</span>
+            <div class="cv"><h4 id="cEmail">—</h4><p>Correo</p></div>
+          </div>
+          <div class="cust-field" id="cIdRow" style="display:none">
+            <span class="ci">🪪</span>
+            <div class="cv"><h4 id="cId">—</h4><p>Identidad / RTN</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Equipment info ────────────────────────────────── -->
+      <div class="card">
+        <div class="card-header"><h3>Equipo</h3></div>
+        <div class="card-body">
+          <div class="equip-badge">
+            <span class="equip-icon" id="eIcon">🔧</span>
+            <div class="equip-info">
+              <h3 id="eName">—</h3>
+              <p id="eCat">—</p>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="info-item"><div class="lbl">Condición</div><div class="val" id="eCond">—</div></div>
+            <div class="info-item"><div class="lbl">Color</div><div class="val" id="eColor">—</div></div>
+            <div class="info-item" id="eSerialRow" style="display:none">
+              <div class="lbl">N° de serie</div><div class="val mono" id="eSerial">—</div>
+            </div>
+          </div>
+          <div id="eAccRow" style="display:none;margin-top:10px">
+            <div class="field-label">Accesorios incluidos</div>
+            <div id="eAccList">—</div>
+          </div>
+          <div id="eAccNotesRow" style="display:none;margin-top:10px">
+            <div class="field-label">Notas de accesorios</div>
+            <p style="font-size:12px;color:var(--muted)" id="eAccNotes">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Shipping info (remoto) ─────────────────────────── -->
+      <div class="card" id="shippingCard" style="display:none">
+        <div class="card-header"><h3>Envío</h3></div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item"><div class="lbl">Método</div><div class="val" id="shMethod">—</div></div>
+            <div class="info-item" id="shCourierRow" style="display:none"><div class="lbl">Courier</div><div class="val" id="shCourier">—</div></div>
+            <div class="info-item" id="shTrackingRow" style="display:none"><div class="lbl">Tracking</div><div class="val mono" id="shTracking">—</div></div>
+            <div class="info-item" id="shArrivalRow" style="display:none"><div class="lbl">Llegada estimada</div><div class="val" id="shArrival">—</div></div>
+          </div>
+          <div id="shNotesRow" style="display:none;margin-top:10px">
+            <div class="field-label">Notas de envío</div>
+            <p style="font-size:12px;color:var(--muted)" id="shNotes">—</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Catalog picker modal ──────────────────────────────── -->
+<div class="cat-modal-overlay" id="catModalOverlay" onclick="closeCatOutside(event)">
+  <div class="cat-modal">
+    <div class="cat-modal-header">
+      <h3>📦 Seleccionar del catálogo</h3>
+      <input type="text" id="catSearch"
+             style="flex:1;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit"
+             placeholder="Buscar…" oninput="renderCatalogList()">
+      <button class="btn btn-ghost" onclick="closeCatModal()" style="padding:7px 12px;margin-left:6px">✕</button>
+    </div>
+    <div class="cat-modal-body" id="catModalBody">
+      <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Cargando catálogo…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reject quote modal ──────────────────────────────────── -->
+<div class="reject-overlay" id="rejectOverlay">
+  <div class="reject-box">
+    <h3 id="rejectTitle">Motivo de rechazo</h3>
+    <textarea id="rejectReason" placeholder="Explique al técnico por qué se rechaza la cotización…"></textarea>
+    <div class="reject-btns">
+      <button class="btn btn-ghost" onclick="closeRejectModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Confirmar rechazo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATUS_MAP = {
+  solicitud_recibida:   { label: '📝 Solicitud recibida',   pill: 'pill-azul' },
+  equipo_en_camino:     { label: '🚚 Equipo en camino',     pill: 'pill-dorado' },
+  equipo_recibido:      { label: '📬 Equipo recibido',      pill: 'pill-verde' },
+  en_diagnostico:       { label: '🔍 En diagnóstico',       pill: 'pill-azul' },
+  esperando_aprobacion: { label: '⚡ Esperando aprobación', pill: 'pill-dorado' },
+  aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde' },
+  esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja' },
+  en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul' },
+  en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul' },
+  listo_para_entrega:   { label: '🎉 Listo para entrega',   pill: 'pill-verde' },
+  entregado:            { label: '✔ Entregado',             pill: 'pill-verde' },
+  cerrado:              { label: '🔒 Cerrado',              pill: 'pill-gris' },
+  cancelado:            { label: '✗ Cancelado',             pill: 'pill-rojo' },
+  irreparable:          { label: '⛔ No reparable',         pill: 'pill-rojo' },
+  abandonado:           { label: '⚠️ Abandonado',           pill: 'pill-rojo' }
+};
+
+const CAT_ICONS = { camara:'📷',lente:'🔭',flash:'⚡',luz:'💡',audio:'🎙',gimbal:'🎬',drone:'🚁',computadora:'💻',monitor:'🖥',tripode:'📸',otro:'🔧' };
+const ORIGIN_LABELS = { cliente_presencial:'📍 Presencial',staff_presencial:'🧑‍💼 Staff presencial',staff_telefono:'📞 Staff teléfono',cliente_remoto:'🌐 Remoto' };
+const COND_LABELS   = { bueno:'✅ Bueno',regular:'⚠️ Regular','dañado':'🔴 Dañado' };
+const SHIP_LABELS   = { presencial:'🚶 Lo trae personalmente',courier:'📦 Courier/mensajería',otro:'🔄 Otro' };
+
+let ticketId    = null;
+let ticketData  = null;
+let techProfiles = {};
+let session     = null;
+let accessToken = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', async () => {
+  session = getSession();
+  if (!session) { location.href = '../login.html'; return; }
+
+  // Técnicos tienen su propio panel — no pueden entrar aquí
+  if (session.role === 'tecnico') { location.href = '../tecnico/index.html'; return; }
+
+  ticketId = new URLSearchParams(location.search).get('id');
+  if (!ticketId) { showView('error'); return; }
+
+  renderUserNav();
+  await loadProfiles();
+  await loadTicket();
+});
+
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) { localStorage.removeItem('sp_session'); return null; }
+    return s;
+  } catch (_) { return null; }
+}
+
+function renderUserNav() {
+  const ROLE_LABELS = { admin:'Administrador', supervisor:'Supervisor', recepcion:'Recepción', tecnico:'Técnico' };
+  const av = document.getElementById('navAvatar');
+  const nm = document.getElementById('navName');
+  const rl = document.getElementById('navRole');
+  if (av) { av.textContent = session.avatar || session.full_name[0]; av.style.background = (session.color||'#3d6aff')+'33'; av.style.color = session.color||'#3d6aff'; }
+  if (nm) nm.textContent = session.full_name;
+  if (rl) rl.textContent = ROLE_LABELS[session.role] || session.role;
+  // Mostrar sección admin en sidebar
+  const adminSec = document.getElementById('navAdminSection');
+  if (adminSec && ['admin','supervisor'].includes(session.role)) adminSec.style.display = 'block';
+}
+
+async function loadProfiles() {
+  const { data } = await sb.from('sp_profiles')
+    .select('id,full_name,role,color,avatar,email,phone')
+    .eq('is_active', true);
+  if (data) {
+    techProfiles = {};
+    data.forEach(p => { techProfiles[p.id] = p; });
+
+    // Populate tech select
+    const sel = document.getElementById('techSelect');
+    const techs = data.filter(p => ['tecnico','admin','supervisor'].includes(p.role));
+    techs.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value       = p.id;
+      opt.textContent = `${p.avatar || p.full_name[0]} ${p.full_name} (${p.role})`;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOAD TICKET
+═══════════════════════════════════════════════════════════════ */
+async function loadTicket() {
+  try {
+    const { data: t, error } = await sb.from('sp_tickets').select(`
+      *,
+      sp_customers!sp_tickets_customer_id_fkey (*),
+      sp_equipment!sp_tickets_equipment_id_fkey (*)
+    `).eq('id', ticketId).single();
+
+    if (error || !t) { showView('error'); return; }
+
+    ticketData  = t;
+    accessToken = t.access_token;
+
+    const [{ data: history }, { data: msgs }, { data: notes }] = await Promise.all([
+      sb.from('sp_ticket_status_history').select('*').eq('ticket_id', ticketId).order('created_at'),
+      sb.from('sp_ticket_messages').select('*').eq('ticket_id', ticketId).order('created_at'),
+      sb.from('sp_ticket_internal_notes').select('*').eq('ticket_id', ticketId).order('created_at')
+    ]);
+
+    renderTicket(t, history || [], msgs || [], notes || []);
+    showView('main');
+    renderNextStep(t.status);
+    await loadQuotes();
+
+    // Mostrar botón eliminar solo a admins
+    if (['admin'].includes(session.role)) {
+      document.getElementById('deleteSection').style.display  = 'block';
+      document.getElementById('btnDeleteTicket').style.display = 'block';
+    }
+
+  } catch (ex) {
+    console.error(ex);
+    showView('error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════════ */
+function renderTicket(t, history, msgs, notes) {
+  const eq = t.sp_equipment;
+  const cu = t.sp_customers;
+  const st = STATUS_MAP[t.status] || { label: t.status, pill: 'pill-gris' };
+
+  // Topbar
+  document.getElementById('topNum').textContent = t.ticket_number;
+  document.title = t.ticket_number + ' · Soporte';
+
+  // Status pill
+  const pill = document.getElementById('statusPill');
+  pill.textContent = st.label;
+  pill.className   = 'big-status ' + st.pill;
+
+  // Info
+  document.getElementById('iTicketNum').textContent = t.ticket_number;
+  document.getElementById('iDate').textContent      = fmtDate(t.created_at);
+  document.getElementById('iOrigin').textContent    = ORIGIN_LABELS[t.ticket_origin] || t.ticket_origin;
+  document.getElementById('iFault').textContent     = t.reported_fault;
+  if (t.client_notes) {
+    document.getElementById('iNotas').textContent = t.client_notes;
+    document.getElementById('iNotasWrap').style.display = 'block';
+  }
+
+  // Tech
+  const tech = t.assigned_to ? techProfiles[t.assigned_to] : null;
+  document.getElementById('iTech').textContent = tech ? tech.full_name : 'Sin asignar';
+  document.getElementById('techSelect').value  = t.assigned_to || '';
+  document.getElementById('statusSelect').value = '';
+
+  // Customer
+  if (cu) {
+    document.getElementById('cName').textContent  = cu.full_name;
+    document.getElementById('cPhone').textContent = cu.phone || '—';
+    if (cu.email)           { document.getElementById('cEmail').textContent = cu.email; document.getElementById('cEmailRow').style.display = 'flex'; }
+    if (cu.identity_number) { document.getElementById('cId').textContent    = cu.identity_number; document.getElementById('cIdRow').style.display = 'flex'; }
+  }
+
+  // Equipment
+  document.getElementById('eIcon').textContent = CAT_ICONS[eq?.category] || '🔧';
+  document.getElementById('eName').textContent = `${eq?.brand} ${eq?.model}`;
+  document.getElementById('eCat').textContent  = (eq?.category || '—');
+  document.getElementById('eCond').textContent = COND_LABELS[eq?.physical_condition] || '—';
+  document.getElementById('eColor').textContent = eq?.color || '—';
+  if (eq?.serial_number) { document.getElementById('eSerial').textContent = eq.serial_number; document.getElementById('eSerialRow').style.display = 'grid-row'; document.getElementById('eSerialRow').style.display = 'block'; }
+  if (eq?.accessories?.length) {
+    document.getElementById('eAccList').innerHTML = eq.accessories.map(a => `<span class="acc-pill">${a}</span>`).join('');
+    document.getElementById('eAccRow').style.display = 'block';
+  }
+  if (eq?.accessories_notes) {
+    document.getElementById('eAccNotes').textContent = eq.accessories_notes;
+    document.getElementById('eAccNotesRow').style.display = 'block';
+  }
+
+  // Shipping
+  if (t.shipping_method) {
+    document.getElementById('shippingCard').style.display = 'block';
+    document.getElementById('shMethod').textContent = SHIP_LABELS[t.shipping_method] || t.shipping_method;
+    if (t.courier_name)   { document.getElementById('shCourier').textContent = t.courier_name;   document.getElementById('shCourierRow').style.display = 'block'; }
+    if (t.tracking_number){ document.getElementById('shTracking').textContent = t.tracking_number; document.getElementById('shTrackingRow').style.display = 'block'; }
+    if (t.estimated_arrival){ document.getElementById('shArrival').textContent = t.estimated_arrival; document.getElementById('shArrivalRow').style.display = 'block'; }
+    if (t.shipping_notes) { document.getElementById('shNotes').textContent = t.shipping_notes;   document.getElementById('shNotesRow').style.display = 'block'; }
+  }
+
+  // Portal link (recepcion/ticket.html → soporte/portal.html)
+  const base = location.origin + location.pathname.replace('recepcion/ticket.html', '');
+  const link = base + 'portal.html?token=' + encodeURIComponent(t.access_token);
+  document.getElementById('portalLinkBox').textContent = link;
+
+  // Fecha límite de diagnóstico
+  renderDiagnosisDeadlineCard(t);
+
+  // Fecha límite de reparación
+  renderDeadlineCard(t);
+
+  // Timeline
+  renderTimeline(history);
+
+  // Messages
+  renderMessages(msgs);
+
+  // Notes
+  renderNotes(notes);
+}
+
+/* ── Fecha límite de diagnóstico ────────────────────────────── */
+function renderDiagnosisDeadlineCard(t) {
+  const el = document.getElementById('diagnosisDeadlineCard');
+  if (!el) return;
+
+  if (t.status !== 'en_diagnostico') { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const isAdmin  = ['admin','supervisor'].includes(session?.role);
+  const deadline = t.diagnosis_expected_at;
+
+  if (!deadline) {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">🔍 Plazo de diagnóstico</span>
+        ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleDiagDeadlineEdit(true)">✏️ Establecer</button>` : ''}
+      </div>
+      <div style="font-size:13px;color:var(--muted);font-style:italic">Sin plazo establecido (se calculó automáticamente al asignar técnico)</div>
+      ${isAdmin ? diagDeadlineEditForm() : ''}`;
+    return;
+  }
+
+  const today    = new Date().toISOString().split('T')[0];
+  const dLine    = new Date(deadline + 'T12:00:00');
+  const diffMs   = dLine.getTime() - Date.now();
+  const diffDays = Math.ceil(diffMs / 86400000);
+  const isPast   = diffDays < 0;
+  const isToday  = diffDays === 0;
+  const isTomorrow = diffDays === 1;
+
+  const fmtDeadline = dLine.toLocaleDateString('es-HN', { dateStyle: 'long' });
+  let statusColor = '#2ed573';
+  let statusMsg   = `✅ Faltan <strong>${diffDays}</strong> día(s)`;
+  if (isPast)     { statusColor = '#ff4757'; statusMsg = `🔴 <strong>${Math.abs(diffDays)}</strong> día(s) de retraso en diagnóstico`; }
+  if (isToday)    { statusColor = '#ff9f43'; statusMsg = `⚠️ <strong>Vence hoy</strong>`; }
+  if (isTomorrow) { statusColor = '#f5c842'; statusMsg = `⏰ <strong>Vence mañana</strong>`; }
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">🔍 Plazo de diagnóstico</span>
+      ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleDiagDeadlineEdit(true)">✏️ Editar</button>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:18px;font-weight:800;color:${statusColor}">${fmtDeadline}</span>
+      <span style="font-size:13px;color:${statusColor}">${statusMsg}</span>
+    </div>
+    ${isAdmin ? diagDeadlineEditForm(deadline) : ''}`;
+}
+
+function diagDeadlineEditForm(current = '') {
+  return `
+    <div id="diagDeadlineEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Nueva fecha límite de diagnóstico:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="diagDeadlineInput" value="${current}" min="${new Date().toISOString().split('T')[0]}"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--fg);font-size:13px">
+        <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveDiagnosisDeadline()">Guardar</button>
+        <button class="btn btn-ghost"   style="padding:7px 12px;font-size:13px" onclick="toggleDiagDeadlineEdit(false)">Cancelar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">⚠️ Al cambiar la fecha se reinician los avisos automáticos al técnico.</div>
+    </div>`;
+}
+
+function toggleDiagDeadlineEdit(show) {
+  const f = document.getElementById('diagDeadlineEditForm');
+  if (f) f.style.display = show ? 'block' : 'none';
+}
+
+async function saveDiagnosisDeadline() {
+  const val = document.getElementById('diagDeadlineInput')?.value;
+  if (!val) { showToast('⚠️ Selecciona una fecha'); return; }
+  try {
+    const { error } = await sb.from('sp_tickets').update({
+      diagnosis_expected_at:               val,
+      diagnosis_deadline_warning_sent_at:  null,  // resetear aviso 1 día antes
+      last_diagnosis_overdue_alert_at:     null   // resetear recordatorios diarios
+    }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Plazo de diagnóstico actualizado');
+    setTimeout(() => location.reload(), 600);
+  } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Fecha límite de reparación ─────────────────────────────── */
+function renderDeadlineCard(t) {
+  const el = document.getElementById('deadlineCard');
+  if (!el) return;
+
+  const inRepair = ['aprobado_reparacion','en_reparacion','en_pruebas'].includes(t.status);
+  if (!inRepair) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const isAdmin = ['admin','supervisor'].includes(session?.role);
+  const deadline = t.repair_expected_at;
+
+  if (!deadline) {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">📅 Fecha límite</span>
+        ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleDeadlineEdit(true)">✏️ Establecer</button>` : ''}
+      </div>
+      <div style="font-size:13px;color:var(--muted);font-style:italic">Sin fecha límite establecida</div>
+      ${isAdmin ? deadlineEditForm() : ''}`;
+    return;
+  }
+
+  const today     = new Date().toISOString().split('T')[0];
+  const dLine     = new Date(deadline + 'T12:00:00');
+  const nowDate   = new Date();
+  const diffMs    = dLine.getTime() - nowDate.getTime();
+  const diffDays  = Math.ceil(diffMs / 86400000);
+  const isPast    = diffDays < 0;
+  const isToday   = diffDays === 0;
+  const isTomorrow= diffDays === 1;
+
+  const fmtDeadline = dLine.toLocaleDateString('es-HN',{dateStyle:'long'});
+  let statusColor = '#2ed573';   // verde
+  let statusMsg   = `✅ Faltan <strong>${diffDays}</strong> día(s)`;
+  if (isPast)    { statusColor = '#ff4757'; statusMsg = `🔴 <strong>${Math.abs(diffDays)}</strong> día(s) de retraso`; }
+  if (isToday)   { statusColor = '#ff9f43'; statusMsg = `⚠️ <strong>Vence hoy</strong>`; }
+  if (isTomorrow){ statusColor = '#f5c842'; statusMsg = `⏰ <strong>Vence mañana</strong>`; }
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">📅 Fecha límite de entrega</span>
+      ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleDeadlineEdit(true)">✏️ Editar</button>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:18px;font-weight:800;color:${statusColor}">${fmtDeadline}</span>
+      <span style="font-size:13px;color:${statusColor}">${statusMsg}</span>
+    </div>
+    ${isAdmin ? deadlineEditForm(deadline) : ''}`;
+}
+
+function deadlineEditForm(current = '') {
+  return `
+    <div id="deadlineEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Nueva fecha límite:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="deadlineInput" value="${current}" min="${new Date().toISOString().split('T')[0]}"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--fg);font-size:13px">
+        <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveDeadline()">Guardar</button>
+        <button class="btn btn-ghost"   style="padding:7px 12px;font-size:13px" onclick="toggleDeadlineEdit(false)">Cancelar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">⚠️ Al cambiar la fecha se reinician los avisos automáticos al técnico.</div>
+    </div>`;
+}
+
+function toggleDeadlineEdit(show) {
+  const f = document.getElementById('deadlineEditForm');
+  if (f) f.style.display = show ? 'block' : 'none';
+}
+
+async function saveDeadline() {
+  const val = document.getElementById('deadlineInput')?.value;
+  if (!val) { showToast('⚠️ Selecciona una fecha'); return; }
+  try {
+    const { error } = await sb.from('sp_tickets').update({
+      repair_expected_at: val,
+      deadline_warning_sent_at: null,   // resetear aviso para que se dispare con la nueva fecha
+      last_overdue_alert_at: null       // resetear recordatorios de atraso
+    }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Fecha límite actualizada');
+    setTimeout(() => location.reload(), 600);
+  } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+function renderTimeline(history) {
+  document.getElementById('histCount').textContent = history.length + ' cambio' + (history.length !== 1 ? 's' : '');
+  if (!history.length) {
+    document.getElementById('tlContent').innerHTML = '<p style="font-size:13px;color:var(--muted)">Sin cambios de estado aún.</p>';
+    return;
+  }
+  const stNames = Object.fromEntries(Object.entries(STATUS_MAP).map(([k,v]) => [k, v.label]));
+  document.getElementById('tlContent').innerHTML = history.map((h, i) => {
+    const isLast = i === history.length - 1;
+    const actorNames = { staff:'Staff', client:'Cliente', system:'Sistema' };
+    return `
+      <div class="tl-item">
+        <div class="tl-dot ${isLast ? 'current' : 'done'}">${isLast ? '●' : '✓'}</div>
+        <div class="tl-content">
+          <h4>${stNames[h.to_status] || h.to_status}</h4>
+          <p>${fmtDateTime(h.created_at)} · ${actorNames[h.actor_type] || h.actor_type}${h.comment ? ' · ' + esc(h.comment) : ''}</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderMessages(msgs) {
+  if (!msgs.length) return;
+  document.getElementById('msgList').innerHTML = msgs.map(m => `
+    <div class="msg ${m.author_type}">
+      <div class="msg-bubble">${esc(m.message)}</div>
+      <div class="msg-meta">${m.author_type === 'client' ? 'Cliente' : 'Soporte'} · ${fmtDateTime(m.created_at)}</div>
+    </div>
+  `).join('');
+}
+
+function renderNotes(notes) {
+  if (!notes.length) return;
+  document.getElementById('notesList').innerHTML = notes.map(n => {
+    const author = n.author_id ? (techProfiles[n.author_id]?.full_name || 'Staff') : 'Staff';
+    return `
+      <div class="note-item">
+        <p>${esc(n.content)}</p>
+        <div class="nm">${author} · ${fmtDateTime(n.created_at)}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════════════════════════ */
+function onStatusChange() {
+  const val = document.getElementById('statusSelect').value;
+  document.getElementById('statusNoteField').style.display  = val ? 'block' : 'none';
+  document.getElementById('partsField').style.display       = val === 'esperando_repuesto' ? 'block' : 'none';
+  document.getElementById('repairField').style.display      = val === 'en_reparacion'      ? 'block' : 'none';
+  document.getElementById('testingField').style.display     = val === 'en_pruebas'         ? 'block' : 'none';
+  if (val !== 'esperando_repuesto') document.getElementById('partsDays').value   = '';
+  if (val !== 'en_reparacion')      document.getElementById('repairDays').value  = '';
+  if (val !== 'en_pruebas')         document.getElementById('testingDays').value = '';
+}
+
+async function changeStatus(btn) {
+  const newStatus = document.getElementById('statusSelect').value;
+  const comment   = document.getElementById('statusNote').value.trim();
+
+  if (!newStatus) { showToast('⚠️ Seleccione un estado.'); return; }
+  if (newStatus === ticketData?.status) { showToast('Ya está en ese estado.'); return; }
+  const restore = btnLoad(btn, 'Actualizando…');
+
+  // Calcular fechas estimadas según el estado
+  let partsExpectedAt = null, repairExpectedAt = null, testingExpectedAt = null;
+
+  function calcDate(days) {
+    const d = new Date(); d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  }
+
+  if (newStatus === 'esperando_repuesto') {
+    const days = parseInt(document.getElementById('partsDays').value);
+    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados para el repuesto.'); return; }
+    partsExpectedAt = calcDate(days);
+  }
+  if (newStatus === 'en_reparacion') {
+    const days = parseInt(document.getElementById('repairDays').value);
+    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados de reparación.'); return; }
+    repairExpectedAt = calcDate(days);
+  }
+  if (newStatus === 'en_pruebas') {
+    const days = parseInt(document.getElementById('testingDays').value);
+    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados de pruebas.'); return; }
+    testingExpectedAt = calcDate(days);
+  }
+
+  try {
+    const updatePayload = { status: newStatus };
+    if (partsExpectedAt)   updatePayload.parts_expected_at   = partsExpectedAt;
+    if (repairExpectedAt)  updatePayload.repair_expected_at  = repairExpectedAt;
+    if (testingExpectedAt) updatePayload.testing_expected_at = testingExpectedAt;
+
+    const { error } = await sb.from('sp_tickets')
+      .update(updatePayload)
+      .eq('id', ticketId);
+    if (error) throw error;
+
+    // Log manually (trigger ya lo hace, pero añadimos comentario si existe)
+    if (comment) {
+      await sb.from('sp_ticket_status_history').insert({
+        ticket_id: ticketId,
+        from_status: ticketData.status,
+        to_status: newStatus,
+        changed_by: session.id,
+        actor_type: 'staff',
+        comment
+      });
+    }
+
+    // Notify client when equipment is ready for pickup (email + WhatsApp)
+    if (newStatus === 'listo_para_entrega') {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'ready_for_pickup',
+              clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              comment: comment || '', portalToken: accessToken
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: cu.phone,
+              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${brand} ${model}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${tNum}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // Notify client: en reparacion
+    if (newStatus === 'en_reparacion' && repairExpectedAt) {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      const days  = parseInt(document.getElementById('repairDays').value);
+      const dateStr = new Date(repairExpectedAt + 'T12:00:00').toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'repair_started', clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              repairDays: days, repairExpectedDate: dateStr, portalToken: accessToken })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `🔧 *Focus Store Soporte*\n\n¡Buenas noticias, ${cu.full_name}! Tu equipo *${brand} ${model}* ya está en reparación.\n\n🎫 Ticket: #${tNum}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando esté listo. 🙏` })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // Notify client: en pruebas
+    if (newStatus === 'en_pruebas' && testingExpectedAt) {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      const days  = parseInt(document.getElementById('testingDays').value);
+      const dateStr = new Date(testingExpectedAt + 'T12:00:00').toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'testing_started', clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              testingDays: days, testingExpectedDate: dateStr, portalToken: accessToken })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `🧪 *Focus Store Soporte*\n\n¡Casi listo, ${cu.full_name}! Tu *${brand} ${model}* está en fase de pruebas.\n\n🎫 Ticket: #${tNum}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando puedas venir a recogerlo. 🙏` })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // Notify client when waiting for parts (email + WhatsApp)
+    if (newStatus === 'esperando_repuesto' && partsExpectedAt) {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      const days  = parseInt(document.getElementById('partsDays').value);
+      const dateStr = new Date(partsExpectedAt + 'T12:00:00').toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' });
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'parts_waiting',
+              clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              partsDays: days, partsExpectedDate: dateStr, portalToken: accessToken
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: cu.phone,
+              message: `📦 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu equipo *${brand} ${model}* necesita un repuesto para continuar la reparación.\n\n🎫 Ticket: #${tNum}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando el repuesto llegue. ¡Gracias por tu paciencia! 🙏`
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // Notify client when equipment is irreparable
+    if (newStatus === 'irreparable') {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      const politicas = `\n\n📌 *Políticas de retiro:*\n• 15 días de almacenamiento gratuito\n• Después aplican cargos diarios\n• A los 60 días se declara abandonado`;
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `⛔ *Focus Store Soporte*\n\nHola ${cu.full_name}, lamentamos informarte que tras el diagnóstico de tu equipo *${brand} ${model}*, nuestro equipo técnico determinó que no tiene reparación posible.\n\n🎫 Ticket: #${tNum}\n\nPuedes pasar a recoger tu equipo en nuestra tienda cuando gustes.${politicas}\n\n📍 *Focus Store Honduras*\nGracias por tu comprensión.` })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'irreparable', clientName: cu.full_name,
+              clientEmail: cu.email, ticketNumber: tNum,
+              deviceBrand: brand, deviceModel: model, portalToken: accessToken })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    showToast('✅ Estado actualizado');
+    setTimeout(() => location.reload(), 1000);
+
+  } catch (ex) {
+    restore?.();
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+async function assignTech(btn) {
+  const restore = btnLoad(btn, 'Guardando…');
+  const techId = document.getElementById('techSelect').value || null;
+  try {
+    // Auto-cambiar a en_diagnostico si el ticket está en estado temprano
+    const earlyStatuses = ['solicitud_recibida','equipo_en_camino','equipo_recibido'];
+    const autoDiag = techId && earlyStatuses.includes(ticketData?.status);
+    const updatePayload = { assigned_to: techId };
+    if (autoDiag) {
+      updatePayload.status = 'en_diagnostico';
+      // Auto-calcular fecha límite de diagnóstico (3 días por defecto)
+      const diagDeadline = new Date();
+      diagDeadline.setDate(diagDeadline.getDate() + 3);
+      updatePayload.diagnosis_expected_at              = diagDeadline.toISOString().split('T')[0];
+      updatePayload.diagnosis_deadline_warning_sent_at = null;
+      updatePayload.last_diagnosis_overdue_alert_at    = null;
+    }
+
+    const { error } = await sb.from('sp_tickets').update(updatePayload).eq('id', ticketId);
+    if (error) throw error;
+
+    const brand = ticketData.sp_equipment?.brand || '';
+    const model = ticketData.sp_equipment?.model || '';
+    const tNum  = ticketData.ticket_number;
+    const cu    = ticketData?.sp_customers;
+
+    // Notificar técnico (email + WhatsApp)
+    if (techId && techProfiles[techId]) {
+      const tech  = techProfiles[techId];
+      const fault = ticketData.reported_fault || '';
+      if (tech.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ techEmail: tech.email, techName: tech.full_name,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model, reportedFault: fault })
+          });
+        } catch (_) {}
+      }
+      if (tech.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: tech.phone,
+              message: `🔧 *Focus Store Soporte*\n\nHola ${tech.full_name}, se te asignó un ticket.\n\n🎫 *Ticket:* #${tNum}\n💻 *Equipo:* ${brand} ${model}\n🔍 *Falla:* ${fault.substring(0,150)}\n\nRevísalo en tu panel:\nhttps://soporte.focusstore.net/tecnico/index.html`
+            })
+          });
+        } catch (_) {}
+      }
+    }
+
+    // Notificar cliente si cambió a en_diagnostico
+    if (autoDiag && cu) {
+      if (cu.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `🔍 *Focus Store Soporte*\n\nHola ${cu.full_name}, ¡buenas noticias! Tu equipo *${brand} ${model}* ha sido asignado a nuestro equipo técnico y ya está siendo revisado.\n\n🎫 Ticket: #${tNum}\n\nUna vez finalizado el diagnóstico recibirás una cotización para tu aprobación.\n\n¡Gracias por tu paciencia! 🙏\n*Focus Store Honduras*`
+            })
+          });
+        } catch (_) {}
+      }
+      if (cu.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'tech_assigned', clientName: cu.full_name,
+              clientEmail: cu.email, ticketNumber: tNum,
+              deviceBrand: brand, deviceModel: model, portalToken: accessToken })
+          });
+        } catch (_) {}
+      }
+    }
+
+    showToast(autoDiag ? '✅ Técnico asignado — cliente notificado' : '✅ Técnico asignado');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+async function sendMessage() {
+  const msg = document.getElementById('newMsg').value.trim();
+  if (!msg) { showToast('⚠️ Escriba un mensaje.'); return; }
+
+  try {
+    const { error } = await sb.from('sp_ticket_messages').insert({
+      ticket_id:           ticketId,
+      author_type:         'staff',
+      author_id:           session.id,
+      message:             msg,
+      is_visible_to_client: true
+    });
+    if (error) throw error;
+
+    // Notificar al cliente por WhatsApp + Email
+    const cu  = ticketData?.sp_customers;
+    const eq  = ticketData?.sp_equipment;
+    const num = ticketData?.ticket_number || ticketId;
+    const portalBase = location.origin + location.pathname.replace('recepcion/ticket.html', '');
+    const portalLink = portalBase + 'portal.html?token=' + encodeURIComponent(ticketData?.access_token || '');
+
+    if (cu) {
+      // WhatsApp — parámetro correcto: "message"
+      if (cu.phone) {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to:      cu.phone,
+            message: `💬 *Mensaje de Focus Store — Ticket #${num}*\n\nHola ${cu.full_name},\n\n"${msg}"\n\n📋 Ver tu ticket:\n${portalLink}`
+          })
+        });
+      }
+      // Email — tipo staff_message
+      if (cu.email) {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:         'staff_message',
+            clientName:   cu.full_name,
+            clientEmail:  cu.email,
+            ticketNumber: num,
+            deviceBrand:  eq?.brand || '',
+            deviceModel:  eq?.model || '',
+            staffMessage: msg,
+            portalToken:  ticketData?.access_token || ''
+          })
+        });
+      }
+    }
+
+    document.getElementById('newMsg').value = '';
+    showToast('✅ Mensaje enviado' + (cu?.phone || cu?.email ? ' y cliente notificado' : ''));
+    setTimeout(() => location.reload(), 1000);
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+async function addNote() {
+  const note = document.getElementById('newNote').value.trim();
+  if (!note) { showToast('⚠️ Escriba una nota.'); return; }
+
+  const noteType = ['admin','supervisor'].includes(session.role) ? 'admin' : session.role;
+
+  try {
+    const { error } = await sb.from('sp_ticket_internal_notes').insert({
+      ticket_id: ticketId,
+      note_type: noteType,
+      author_id: session.id,
+      content:   note
+    });
+    if (error) throw error;
+    document.getElementById('newNote').value = '';
+    showToast('✅ Nota agregada');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+function copyPortalLink() {
+  const link = document.getElementById('portalLinkBox').textContent;
+  navigator.clipboard.writeText(link).then(() => showToast('✅ Enlace copiado'));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   QUOTES — state
+═══════════════════════════════════════════════════════════════ */
+let quoteInternal = null;   // tech → admin quote
+let quoteClient   = null;   // admin → client quote
+let catalogItems  = [];     // price catalog cache
+let buildItems    = [];     // line items being built [{desc,cat,qty,price}]
+let catTarget     = null;   // 'int' or 'cli' — which quote is being built
+let rejectTarget  = null;   // {quoteId, type}
+
+const CAT_LABEL_MAP = { mano_de_obra:'Mano de obra', repuesto:'Repuesto',
+  diagnostico:'Diagnóstico', servicio:'Servicio', otro:'Otro' };
+
+/* Load quotes for this ticket */
+async function loadQuotes() {
+  const { data } = await sb.from('sp_repair_quotes')
+    .select(`*, sp_quote_items(*), sp_profiles!sp_repair_quotes_created_by_fkey(full_name)`)
+    .eq('ticket_id', ticketId)
+    .order('created_at');
+
+  const quotes = data || [];
+  quoteInternal = quotes.find(q => q.quote_type === 'interna') || null;
+  quoteClient   = quotes.find(q => q.quote_type === 'cliente') || null;
+
+  // Load catalog
+  const { data: cat } = await sb.from('sp_price_catalog')
+    .select('*').eq('is_active', true).order('category').order('name');
+  catalogItems = cat || [];
+
+  renderInternalQuote();
+  renderClientQuote();
+
+  // Re-renderizar banner con info actualizada de cotizaciones
+  if (ticketData) renderNextStep(ticketData.status);
+}
+
+/* ── Render internal quote (tech → admin) ────────────────────── */
+function renderInternalQuote() {
+  const el = document.getElementById('quoteIntBody');
+  const canManage = ['admin','supervisor'].includes(session.role);
+
+  if (!quoteInternal) {
+    el.innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
+        El técnico aún no ha enviado cotización para este ticket.
+      </p>`;
+    return;
+  }
+
+  const q = quoteInternal;
+  const items = q.sp_quote_items || [];
+  const statusHtml = quoteStatusBadge(q.status);
+  const creator = q.sp_profiles?.full_name || 'Técnico';
+
+  let actionsHtml = '';
+  if (q.status === 'pendiente' && canManage) {
+    actionsHtml = `
+      <div class="action-row" style="margin-top:14px">
+        <button class="btn btn-success" onclick="approveInternalQuote('${q.id}')">✅ Aprobar cotización</button>
+        <button class="btn btn-danger"  onclick="openRejectModal('${q.id}','interna')">✗ Rechazar</button>
+      </div>`;
+  }
+  if (q.status === 'rechazada' && q.rejection_reason) {
+    actionsHtml += `<div class="rejection-box">Motivo de rechazo: ${esc(q.rejection_reason)}</div>`;
+  }
+
+  const totalDays = (q.repair_days||0) + (q.parts_days||0) + (q.testing_days||0);
+  const daysHtml = totalDays > 0 ? `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:10px 0">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">📅 Días estimados de trabajo</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:5px 16px;font-size:13px">
+        <span>🔧 Reparación</span><span style="font-weight:700;text-align:right">${q.repair_days||0} día(s)</span>
+        ${(q.parts_days||0) > 0 ? `<span>📦 Repuesto</span><span style="font-weight:700;text-align:right">${q.parts_days} día(s)</span>` : ''}
+        <span>🧪 Pruebas</span><span style="font-weight:700;text-align:right">${q.testing_days||0} día(s)</span>
+        <span style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px;color:var(--accent);font-weight:700">⏱️ Total estimado</span>
+        <span style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px;font-weight:800;color:var(--accent);text-align:right;font-size:15px">${totalDays} día(s)</span>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      ${statusHtml}
+      <span style="font-size:11px;color:var(--muted)">Por ${esc(creator)} · ${fmtDate(q.created_at)}</span>
+    </div>
+    ${quoteItemsTable(items, false)}
+    ${quoteTotals(q, false)}
+    ${daysHtml}
+    ${q.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;padding:8px 12px;background:var(--bg);border-radius:8px">📝 ${esc(q.notes)}</div>` : ''}
+    ${actionsHtml}`;
+}
+
+/* ── Render client quote (admin → client) ────────────────────── */
+function renderClientQuote() {
+  const el = document.getElementById('quoteCliBody');
+  const canManage = ['admin','supervisor','recepcion'].includes(session.role);
+
+  // If no client quote yet — show builder or waiting message
+  if (!quoteClient) {
+    if (!canManage) {
+      el.innerHTML = `<p style="font-size:13px;color:var(--muted)">Sin cotización al cliente todavía.</p>`;
+      return;
+    }
+    el.innerHTML = buildClientQuoteForm();
+    return;
+  }
+
+  const q = quoteClient;
+  const items = q.sp_quote_items || [];
+  const statusHtml = quoteStatusBadge(q.status);
+
+  let actionsHtml = '';
+  if (q.status === 'rechazada' && q.rejection_reason) {
+    actionsHtml = `<div class="rejection-box">Cliente rechazó: ${esc(q.rejection_reason)}</div>`;
+    if (canManage) {
+      actionsHtml += `<button class="btn btn-primary" style="margin-top:12px" onclick="newClientQuote()">Crear nueva cotización</button>`;
+    }
+  }
+  if (q.status === 'pendiente') {
+    actionsHtml = `<p style="font-size:12px;color:var(--gold);margin-top:10px">⏳ Esperando respuesta del cliente…</p>`;
+  }
+
+  // Days from tech quote (quoteInternal)
+  const qi = quoteInternal;
+  const totalDaysCli = qi ? (qi.repair_days||0) + (qi.parts_days||0) + (qi.testing_days||0) : 0;
+  const clientDaysHtml = totalDaysCli > 0 ? `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:10px 0">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">📅 Días estimados de trabajo</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:5px 16px;font-size:13px">
+        <span>🔧 Reparación</span><span style="font-weight:700;text-align:right">${qi.repair_days||0} día(s)</span>
+        ${(qi.parts_days||0) > 0 ? `<span>📦 Repuesto</span><span style="font-weight:700;text-align:right">${qi.parts_days} día(s)</span>` : ''}
+        <span>🧪 Pruebas</span><span style="font-weight:700;text-align:right">${qi.testing_days||0} día(s)</span>
+        <span style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px;color:var(--accent);font-weight:700">⏱️ Total estimado</span>
+        <span style="border-top:1px solid var(--border);padding-top:6px;margin-top:2px;font-weight:800;color:var(--accent);text-align:right;font-size:15px">${totalDaysCli} día(s)</span>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      ${statusHtml}
+      <span style="font-size:11px;color:var(--muted)">${fmtDate(q.created_at)}</span>
+    </div>
+    ${quoteItemsTable(items, true)}
+    ${quoteTotals(q, true)}
+    ${clientDaysHtml}
+    ${q.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;padding:8px 12px;background:var(--bg);border-radius:8px">📝 ${esc(q.notes)}</div>` : ''}
+    ${actionsHtml}`;
+}
+
+/* ── Quote builder form ──────────────────────────────────────── */
+function buildClientQuoteForm(prefill) {
+  buildItems = prefill || [];
+  return `
+    <div id="cliBuildArea">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">LÍNEAS DE COTIZACIÓN</span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="openCatModal('cli')">
+          📦 Agregar del catálogo
+        </button>
+      </div>
+      <div id="cliBuildRows"></div>
+      <button class="btn btn-ghost btn-full" style="font-size:12px;margin-bottom:10px" onclick="addBuildRow()">
+        ＋ Agregar línea manualmente
+      </button>
+      <div class="quote-live-total" id="cliLiveTotal">
+        <div class="qlt-item"><div class="qlt-label">Subtotal</div><div class="qlt-val cli" id="qltSub">L 0.00</div></div>
+        <div class="qlt-item"><div class="qlt-label">ISV 15%</div><div class="qlt-val isv" id="qltIsv">L 0.00</div></div>
+        <div class="qlt-item" id="qltCreditRow" style="display:none">
+          <div class="qlt-label" style="color:var(--green)">✅ Crédito diagnóstico</div>
+          <div class="qlt-val" id="qltCreditAmt" style="color:var(--green);font-family:monospace">-L 0.00</div>
+        </div>
+        <div class="qlt-item"><div class="qlt-label" style="font-size:13px;font-weight:700">TOTAL A PAGAR</div><div class="qlt-val cli" style="font-size:20px" id="qltTotal">L 0.00</div></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="isvCheck" onchange="recalcBuild()" checked> Aplicar ISV 15%
+        </label>
+      </div>
+      ${(() => {
+        const qi = quoteInternal;
+        if (!qi || (!qi.repair_days && !qi.testing_days)) return '';
+        const total = (qi.repair_days||0) + (qi.parts_days||0) + (qi.testing_days||0);
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">📅 Días estimados de trabajo</div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:6px 16px;font-size:13px">
+            <span>🔧 Reparación</span><span style="font-weight:700;text-align:right">${qi.repair_days||0} día(s)</span>
+            ${(qi.parts_days||0)>0 ? `<span>📦 Repuesto</span><span style="font-weight:700;text-align:right">${qi.parts_days} día(s)</span>` : ''}
+            <span>🧪 Pruebas</span><span style="font-weight:700;text-align:right">${qi.testing_days||0} día(s)</span>
+            <span style="border-top:1px solid var(--border);padding-top:6px;color:var(--accent);font-weight:700">⏱️ Total estimado</span>
+            <span style="border-top:1px solid var(--border);padding-top:6px;font-weight:800;color:var(--accent);text-align:right;font-size:15px">${total} día(s)</span>
+          </div>
+        </div>`;
+      })()}
+      <div class="field" style="margin-bottom:10px">
+        <div class="field-label">Cargo de diagnóstico</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center">
+          <input type="number" id="diagFee" placeholder="0.00" min="0" step="0.01" oninput="recalcBuild()">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="diagCredit" onchange="recalcBuild()"> Acreditar si aprueban
+          </label>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <div class="field-label">Nota para el cliente (opcional)</div>
+        <textarea id="cliQuoteNote" rows="2" placeholder="Notas que verá el cliente en su portal…"></textarea>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success btn-full" onclick="sendClientQuote(this)">
+          📤 Enviar cotización al cliente
+        </button>
+      </div>
+    </div>`;
+}
+
+function newClientQuote() {
+  const el = document.getElementById('quoteCliBody');
+  el.innerHTML = buildClientQuoteForm();
+  renderBuildRows();
+}
+
+/* ── Build rows ──────────────────────────────────────────────── */
+function renderBuildRows() {
+  const container = document.getElementById('cliBuildRows');
+  if (!container) return;
+  if (!buildItems.length) {
+    container.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">
+      Sin líneas. Agregue items del catálogo o manualmente.</p>`;
+    recalcBuild();
+    return;
+  }
+  container.innerHTML = buildItems.map((item, i) => `
+    <div class="qi-build-row">
+      <input type="text" value="${esc(item.desc)}" placeholder="Descripción…"
+             oninput="buildItems[${i}].desc=this.value">
+      <input type="number" value="${item.qty}" min="1" step="1" placeholder="Qty"
+             oninput="buildItems[${i}].qty=parseFloat(this.value)||1;recalcBuild()">
+      <input type="number" value="${item.price}" min="0" step="0.01" placeholder="Precio"
+             oninput="buildItems[${i}].price=parseFloat(this.value)||0;recalcBuild()">
+      <button class="qi-del-btn" onclick="removeBuildRow(${i})">🗑</button>
+    </div>`).join('');
+  recalcBuild();
+}
+
+function addBuildRow() {
+  buildItems.push({ desc:'', cat:'servicio', qty:1, price:0, catalogId:null });
+  renderBuildRows();
+}
+
+function removeBuildRow(i) {
+  buildItems.splice(i, 1);
+  renderBuildRows();
+}
+
+function recalcBuild() {
+  const sub        = buildItems.reduce((s, it) => s + (it.qty * it.price), 0);
+  const diagFee    = parseFloat(document.getElementById('diagFee')?.value) || 0;
+  const diagCredit = document.getElementById('diagCredit')?.checked;
+  const applyIsv   = document.getElementById('isvCheck')?.checked;
+  const isv        = applyIsv ? sub * 0.15 : 0;
+  // Si se acredita, el diagnóstico YA FUE COBRADO → se descuenta del total
+  const total = sub + isv - (diagCredit ? diagFee : 0);
+  if (document.getElementById('qltSub'))   document.getElementById('qltSub').textContent   = 'L ' + fmt(sub);
+  if (document.getElementById('qltIsv'))   document.getElementById('qltIsv').textContent   = 'L ' + fmt(isv);
+  if (document.getElementById('qltTotal')) document.getElementById('qltTotal').textContent = 'L ' + fmt(total);
+  // Mostrar/ocultar fila de crédito
+  const creditRow = document.getElementById('qltCreditRow');
+  const creditAmt = document.getElementById('qltCreditAmt');
+  if (creditRow) creditRow.style.display = (diagCredit && diagFee > 0) ? 'flex' : 'none';
+  if (creditAmt) creditAmt.textContent   = '-L ' + fmt(diagFee);
+}
+
+/* ── Send client quote ───────────────────────────────────────── */
+async function sendClientQuote(btn) {
+  if (!buildItems.length) { showToast('⚠️ Agregue al menos una línea'); return; }
+  const hasEmpty = buildItems.some(i => !i.desc.trim() || i.price <= 0);
+  if (hasEmpty) { showToast('⚠️ Complete todas las líneas (descripción y precio)'); return; }
+  const restore = btnLoad(btn, 'Enviando cotización…');
+
+  const sub        = buildItems.reduce((s, it) => s + (it.qty * it.price), 0);
+  const diagFee    = parseFloat(document.getElementById('diagFee')?.value) || 0;
+  const diagCredit = document.getElementById('diagCredit')?.checked || false;
+  const applyIsv   = document.getElementById('isvCheck')?.checked;
+  const taxRate    = applyIsv ? 0.15 : 0;
+  const taxAmount  = sub * taxRate;
+  // Si se acredita, el diagnóstico YA FUE COBRADO → se descuenta del total
+  const total = sub + taxAmount - (diagCredit ? diagFee : 0);
+  const note  = document.getElementById('cliQuoteNote')?.value.trim() || null;
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+
+  try {
+    const { data: q, error: qErr } = await sb.from('sp_repair_quotes').insert({
+      ticket_id: ticketId, quote_type: 'cliente',
+      created_by: session.id, status: 'pendiente',
+      subtotal: sub, tax_rate: taxRate, tax_amount: taxAmount,
+      total, diagnosis_fee: diagFee, diagnosis_credited: diagCredit,
+      notes: note, expires_at: expiresAt,
+      parent_quote_id: quoteInternal?.id || null,
+      // Copiar días estimados de la cotización del técnico
+      repair_days:  quoteInternal?.repair_days  || null,
+      parts_days:   quoteInternal?.parts_days   || null,
+      testing_days: quoteInternal?.testing_days || null
+    }).select('id').single();
+    if (qErr) throw qErr;
+
+    const lineItems = buildItems.map((it, i) => ({
+      quote_id: q.id, description: it.desc, item_category: it.cat,
+      quantity: it.qty, unit_price: it.price, total_price: it.qty * it.price,
+      sort_order: i, catalog_item_id: it.catalogId || null
+    }));
+    const { error: iErr } = await sb.from('sp_quote_items').insert(lineItems);
+    if (iErr) throw iErr;
+
+    // Update ticket status → esperando_aprobacion
+    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion' }).eq('id', ticketId);
+
+    // Notify client: quote ready (email + WhatsApp)
+    const cu    = ticketData?.sp_customers;
+    const brand = ticketData.sp_equipment?.brand || '';
+    const model = ticketData.sp_equipment?.model || '';
+    const tNum  = ticketData.ticket_number;
+    if (cu?.email) {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'quote_ready',
+            clientName: cu.full_name, clientEmail: cu.email,
+            ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+            items: buildItems.map(i => ({ description: i.desc, qty: i.qty, unit_price: i.price })),
+            subtotal: sub, taxAmount, total, expiresAt, note: note || '',
+            diagFee: diagCredit ? diagFee : 0, diagCredit,
+            portalToken: accessToken
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+    if (cu?.phone) {
+      const totalFmt = total.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone,
+            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n💵 *Total:* L. ${totalFmt}\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    showToast('✅ Cotización enviada al cliente');
+    setTimeout(() => location.reload(), 1000);
+  } catch (ex) {
+    showToast('⚠️ Error: ' + ex.message);
+  }
+}
+
+/* ── Approve internal quote ──────────────────────────────────── */
+async function approveInternalQuote(qId) {
+  try {
+    const { error } = await sb.from('sp_repair_quotes').update({
+      status: 'aprobada', approved_at: new Date().toISOString(), approved_by: session.id
+    }).eq('id', qId);
+    if (error) throw error;
+
+    // Calcular y guardar fecha límite automáticamente (días estimados de la cotización del técnico)
+    if (quoteInternal) {
+      const totalDays = (quoteInternal.repair_days || 0) + (quoteInternal.parts_days || 0) + (quoteInternal.testing_days || 0);
+      if (totalDays > 0) {
+        const deadline = new Date();
+        deadline.setDate(deadline.getDate() + totalDays);
+        const deadlineStr = deadline.toISOString().split('T')[0]; // YYYY-MM-DD
+        await sb.from('sp_tickets').update({
+          repair_expected_at: deadlineStr,
+          deadline_warning_sent_at: null  // resetear para que dispare el aviso cuando corresponda
+        }).eq('id', ticketId);
+      }
+    }
+
+    // Notificar al técnico que su cotización fue aprobada por el admin
+    const techId = ticketData?.assigned_to;
+    if (techId && techProfiles[techId]) {
+      const tech  = techProfiles[techId];
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      if (tech.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: tech.phone,
+              message: `✅ *Focus Store — Cotización Aprobada*\n\nHola ${tech.full_name}, tu cotización para el Ticket *#${tNum}* fue aprobada por Focus Store.\n\n💻 Equipo: ${brand} ${model}\n\nPronto te avisaremos para iniciar la reparación cuando el cliente confirme.\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
+          });
+        } catch(_) {}
+      }
+      if (tech.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ techEmail: tech.email, techName: tech.full_name,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              reportedFault: `✅ Tu cotización fue aprobada por Focus Store. Pronto te avisaremos cuando el cliente confirme para iniciar la reparación.` })
+          });
+        } catch(_) {}
+      }
+    }
+
+    showToast('✅ Cotización aprobada — técnico notificado');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Reject modal ────────────────────────────────────────────── */
+function openRejectModal(qId, type) {
+  rejectTarget = { qId, type };
+  document.getElementById('rejectTitle').textContent =
+    type === 'interna' ? '✗ Rechazar cotización del técnico' : '✗ Rechazar cotización al cliente';
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectOverlay').classList.add('show');
+  document.getElementById('rejectReason').focus();
+}
+function closeRejectModal() { document.getElementById('rejectOverlay').classList.remove('show'); }
+
+async function confirmReject() {
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) { document.getElementById('rejectReason').style.borderColor = 'var(--red)'; return; }
+  if (!rejectTarget) return;
+
+  try {
+    const { error } = await sb.from('sp_repair_quotes').update({
+      status: 'rechazada', rejection_reason: reason,
+      rejected_by: session.id, rejected_at: new Date().toISOString()
+    }).eq('id', rejectTarget.qId);
+    if (error) throw error;
+    closeRejectModal();
+
+    // Si es la cotización INTERNA (del técnico) → notificar técnico Y cliente
+    if (rejectTarget.type === 'interna') {
+      // Cambiar estado del ticket a cancelado
+      await sb.from('sp_tickets').update({ status: 'cancelado' }).eq('id', ticketId);
+
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData?.sp_equipment?.brand || '';
+      const model = ticketData?.sp_equipment?.model || '';
+      const tNum  = ticketData?.ticket_number;
+
+      // 1. Notificar al TÉCNICO con el motivo
+      const techId = ticketData?.assigned_to;
+      if (techId && techProfiles[techId]) {
+        const tech = techProfiles[techId];
+        if (tech.phone) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: tech.phone,
+                message: `❌ *Focus Store — Cotización Rechazada*\n\nHola ${tech.full_name}, tu cotización para el Ticket *#${tNum}* fue rechazada.\n\n💻 Equipo: ${brand} ${model}\n📝 Motivo: "${reason}"\n\nRevisa el ticket en tu panel:\nhttps://soporte.focusstore.net/tecnico/index.html` })
+            });
+          } catch(_) {}
+        }
+        if (tech.email) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                techEmail: tech.email, techName: tech.full_name,
+                ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+                reportedFault: `❌ Tu cotización fue rechazada.\n\nMotivo: "${reason}"\n\nPor favor revisa y envía una nueva cotización si aplica.`
+              })
+            });
+          } catch(_) {}
+        }
+      }
+
+      // 2. Notificar al CLIENTE que pase a recoger + políticas
+      const politicasWA = `\n\n📌 *Políticas de retiro:*\n• 15 días de almacenamiento gratuito\n• Después aplican cargos diarios\n• A los 60 días se declara abandonado`;
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `ℹ️ *Focus Store Soporte*\n\nHola ${cu.full_name}, te informamos que la reparación de tu equipo *${brand} ${model}* no será procesada.\n\n🎫 Ticket: #${tNum}\n\nPuedes pasar a recoger tu equipo en nuestra tienda cuando gustes.${politicasWA}\n\n📍 *Focus Store Honduras*\nGracias por tu comprensión.` })
+          });
+        } catch(_) {}
+      }
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'irreparable', clientName: cu.full_name,
+              clientEmail: cu.email, ticketNumber: tNum,
+              deviceBrand: brand, deviceModel: model, portalToken: accessToken })
+          });
+        } catch(_) {}
+      }
+      showToast('✅ Cotización rechazada — técnico y cliente notificados');
+    } else {
+      showToast('Cotización rechazada');
+    }
+
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Catalog modal ───────────────────────────────────────────── */
+function openCatModal(target) {
+  catTarget = target;
+  document.getElementById('catSearch').value = '';
+  document.getElementById('catModalOverlay').classList.add('show');
+  renderCatalogList();
+  document.getElementById('catSearch').focus();
+}
+function closeCatModal() { document.getElementById('catModalOverlay').classList.remove('show'); }
+function closeCatOutside(e) { if (e.target === document.getElementById('catModalOverlay')) closeCatModal(); }
+
+function renderCatalogList() {
+  const q = document.getElementById('catSearch').value.toLowerCase();
+  const items = catalogItems.filter(i =>
+    !q || i.name.toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q)
+  );
+  const body = document.getElementById('catModalBody');
+  if (!items.length) {
+    body.innerHTML = `<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No hay items en el catálogo.</p>`;
+    return;
+  }
+  const groups = {};
+  items.forEach(i => { if (!groups[i.category]) groups[i.category] = []; groups[i.category].push(i); });
+
+  body.innerHTML = Object.entries(groups).map(([cat, its]) => `
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:8px 8px 4px">${CAT_LABEL_MAP[cat]||cat}</div>
+    ${its.map(i => `
+      <div class="cat-item" onclick="addFromCatalog('${i.id}')">
+        <div class="cat-item-info">
+          <div class="cat-item-name">${esc(i.name)}</div>
+          ${i.description ? `<div class="cat-item-cat">${esc(i.description)}</div>` : ''}
+        </div>
+        <div class="cat-item-prices">
+          <div class="cat-item-tec">Tec: L ${fmt(i.unit_price_tecnico)}</div>
+          <div class="cat-item-cli">Cli: L ${fmt(i.unit_price_cliente)}</div>
+        </div>
+      </div>`).join('')}
+  `).join('');
+}
+
+function addFromCatalog(catId) {
+  const item = catalogItems.find(i => i.id === catId);
+  if (!item) return;
+  buildItems.push({
+    desc: item.name, cat: item.category, qty: 1,
+    price: item.unit_price_cliente,
+    catalogId: item.id
+  });
+  closeCatModal();
+  renderBuildRows();
+}
+
+/* ── Render helpers for quote display ────────────────────────── */
+function quoteStatusBadge(status) {
+  const map = {
+    pendiente:'⏳ Pendiente', aprobada:'✅ Aprobada',
+    rechazada:'✗ Rechazada', vencida:'⌛ Vencida', borrador:'📝 Borrador'
+  };
+  return `<span class="quote-status qs-${status}">${map[status]||status}</span>`;
+}
+
+function quoteItemsTable(items, showClientPrice) {
+  if (!items.length) return `<p style="font-size:12px;color:var(--muted)">Sin líneas.</p>`;
+  return `
+    <table class="qi-table">
+      <thead><tr>
+        <th>Descripción</th>
+        <th style="text-align:right">Cant.</th>
+        <th style="text-align:right">P. Unit.</th>
+        <th style="text-align:right">Total</th>
+      </tr></thead>
+      <tbody>
+        ${items.sort((a,b)=>a.sort_order-b.sort_order).map(it => `
+          <tr>
+            <td class="qi-desc">
+              <div>${esc(it.description)}</div>
+              ${it.item_category ? `<div class="qi-cat">${CAT_LABEL_MAP[it.item_category]||it.item_category}</div>` : ''}
+            </td>
+            <td class="qi-num">${it.quantity}</td>
+            <td class="qi-num">L ${fmt(it.unit_price)}</td>
+            <td class="qi-num">L ${fmt(it.total_price)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function quoteTotals(q, isClient) {
+  const sub = parseFloat(q.subtotal)||0;
+  const isv = parseFloat(q.tax_amount)||0;
+  const fee = parseFloat(q.diagnosis_fee)||0;
+  const tot = parseFloat(q.total)||0;
+  const credited = q.diagnosis_credited;
+  return `
+    <div class="qi-total-section">
+      <div class="qi-total-row"><span>Subtotal</span><span class="mono">L ${fmt(sub)}</span></div>
+      ${isv > 0 ? `<div class="qi-total-row"><span>ISV 15%</span><span class="mono">L ${fmt(isv)}</span></div>` : ''}
+      ${fee > 0 && credited ? `
+        <div class="qi-total-row" style="color:var(--green)">
+          <span>✅ Crédito diagnóstico (ya pagado)</span>
+          <span class="mono">-L ${fmt(fee)}</span>
+        </div>` : fee > 0 ? `
+        <div class="qi-total-row">
+          <span>Cargo diagnóstico</span>
+          <span class="mono">L ${fmt(fee)}</span>
+        </div>` : ''}
+      <div class="qi-total-row main">
+        <span>TOTAL A PAGAR</span>
+        <span class="mono ${isClient ? 'price-cliente' : 'price-tecnico'}">L ${fmt(tot)}</span>
+      </div>
+      ${fee > 0 && credited ? `
+        <div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:6px;padding:8px 10px;margin-top:8px;font-size:11px;color:#f5c842">
+          📌 <strong>Nota:</strong> Si no aprueba la reparación, el cargo de diagnóstico (L ${fmt(fee)}) no es reembolsable.
+        </div>` : ''}
+    </div>`;
+}
+
+function fmt(n) { return Number(n).toLocaleString('es-HN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+function showView(v) {
+  document.getElementById('loadingView').style.display = v === 'loading' ? 'flex' : 'none';
+  document.getElementById('errorView').style.display   = v === 'error'   ? 'flex' : 'none';
+  document.getElementById('mainView').style.display    = v === 'main'    ? 'block': 'none';
+}
+function esc(s) { return s?.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || ''; }
+function fmtDate(iso)     { return new Date(iso).toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' }); }
+function fmtDateTime(iso) { return new Date(iso).toLocaleString('es-HN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+/* ═══════════════════════════════════════════════════════════════
+   ELIMINAR TICKET (solo admin)
+═══════════════════════════════════════════════════════════════ */
+async function confirmDeleteTicket() {
+  const tNum = ticketData?.ticket_number || 'este ticket';
+  const ok = confirm(`⚠️ ¿Eliminar permanentemente el Ticket ${tNum}?\n\nEsta acción NO se puede deshacer. Se borrarán todos los datos relacionados (cotizaciones, mensajes, historial).`);
+  if (!ok) return;
+
+  // Segunda confirmación para tickets con datos
+  const ok2 = confirm(`¿Está seguro? Se eliminará ${tNum} para siempre.`);
+  if (!ok2) return;
+
+  const btn = document.getElementById('btnDeleteTicket');
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+
+  try {
+    const id = ticketData.id;
+
+    // Borrar en cascada manualmente (por si no hay ON DELETE CASCADE)
+    // 1. Quote items
+    const { data: quotes } = await sb.from('sp_repair_quotes').select('id').eq('ticket_id', id);
+    if (quotes?.length) {
+      const qIds = quotes.map(q => q.id);
+      await sb.from('sp_quote_items').delete().in('quote_id', qIds);
+      await sb.from('sp_repair_quotes').delete().in('id', qIds);
+    }
+    // 2. Mensajes, notas, historial, alertas
+    await sb.from('sp_ticket_messages').delete().eq('ticket_id', id);
+    await sb.from('sp_ticket_internal_notes').delete().eq('ticket_id', id);
+    await sb.from('sp_ticket_status_history').delete().eq('ticket_id', id);
+    await sb.from('sp_ticket_alerts').delete().eq('ticket_id', id);
+    // 3. Ticket
+    const { error } = await sb.from('sp_tickets').delete().eq('id', id);
+    if (error) throw error;
+
+    showToast('🗑️ Ticket eliminado correctamente');
+    setTimeout(() => { location.href = 'index.html?_v=' + Date.now(); }, 1200);
+  } catch (ex) {
+    btn.disabled = false;
+    btn.textContent = '🗑️ Eliminar ticket';
+    showToast('⚠️ Error al eliminar: ' + ex.message);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRÓXIMO PASO — Banner de guía automática
+═══════════════════════════════════════════════════════════════ */
+const NEXT_STEPS = {
+  solicitud_recibida:   { text: '¿Ya llegó el equipo a la tienda? Márcalo como recibido.',            btn: '📬 Marcar como recibido',        color: '#2ed573', action: 'recibido' },
+  equipo_en_camino:     { text: 'El equipo está en camino. Cuando llegue, márcalo como recibido.',    btn: '📬 Marcar como recibido',        color: '#2ed573', action: 'recibido' },
+  equipo_recibido:      { text: 'Asigna un técnico para iniciar el diagnóstico del equipo.',          btn: '🔍 Asignar técnico',             color: '#3d6aff', action: 'asignar' },
+  en_diagnostico:       { text: 'Esperando que el técnico envíe su cotización interna.',              btn: '👁 Ver cotización técnico',       color: '#8892a4', action: 'ver_cotizacion' },
+  esperando_aprobacion: { text: 'El técnico envió su cotización. Revísala para aprobar o rechazar.',  btn: '✅ Revisar cotización',          color: '#f5c842', action: 'ver_cotizacion' },
+  aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
+  aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
+  esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
+  en_reparacion:        { text: 'El equipo está en reparación. Actualiza cuando termine.',            btn: '🧪 Reparación lista → Pruebas',  color: '#3d6aff', action: 'en_pruebas' },
+  en_pruebas:           { text: 'El equipo está en pruebas. Cuando todo esté OK, márcalo listo.',     btn: '🎉 Pruebas OK → Listo',          color: '#a29bfe', action: 'listo' },
+  listo_para_entrega:   { text: 'El equipo está listo. El cliente ya fue notificado.',                btn: '✔ Marcar como entregado',       color: '#2ed573', action: 'entregado' },
+  irreparable:          { text: 'El cliente fue notificado. Cuando venga a recoger su equipo, márcalo como entregado.', btn: '✔ Cliente recogió su equipo',    color: '#2ed573', action: 'entregado' },
+  cancelado:            { text: 'El cliente rechazó la cotización. Puedes crear una nueva cotización o marcar el equipo como entregado cuando lo recoja.', btn: '✔ Cliente recogió su equipo', color: '#2ed573', action: 'entregado' },
+};
+
+function renderNextStep(status) {
+  const banner = document.getElementById('nextStepBanner');
+
+  // Caso especial: aprobado_reparacion + cotización interna ya aprobada
+  let effectiveStatus = status;
+  if (status === 'aprobado_reparacion' && quoteInternal?.status === 'aprobada') {
+    effectiveStatus = 'aprobado_reparacion_listo';
+  }
+
+  const ns = NEXT_STEPS[effectiveStatus];
+  if (!ns) { banner.style.display = 'none'; return; }
+  document.getElementById('nextStepText').textContent = ns.text;
+  const btn = document.getElementById('nextStepBtn');
+  btn.textContent      = ns.btn;
+  btn.style.background = ns.color;
+  btn.style.color      = ['#f5c842','#2ed573','#ff9f43','#a29bfe'].includes(ns.color) ? '#1a1f2e' : '#fff';
+  banner.style.display = 'flex';
+
+  // Badge de tiempo en el estado actual
+  const timerEl = document.getElementById('nextStepTimer');
+  if (timerEl && ticketData?.status_changed_at) {
+    const msInStatus = Date.now() - new Date(ticketData.status_changed_at).getTime();
+    const horas = Math.floor(msInStatus / 3600000);
+    const dias  = Math.floor(horas / 24);
+    let timerText = '';
+    if (dias >= 1)      timerText = `⏱ ${dias} día${dias > 1 ? 's' : ''} en este estado`;
+    else if (horas >= 1) timerText = `⏱ ${horas}h en este estado`;
+    else                timerText = `⏱ Menos de 1h en este estado`;
+    // Color: verde <1d, amarillo 1-3d, rojo >3d
+    const color = dias >= 3 ? '#ff4757' : dias >= 1 ? '#f5c842' : '#2ed573';
+    timerEl.textContent      = timerText;
+    timerEl.style.color      = color;
+    timerEl.style.background = color + '22';
+    timerEl.style.display    = 'inline-block';
+  }
+}
+
+async function doNextStep() {
+  const status = ticketData?.status;
+  const ns = NEXT_STEPS[status];
+  if (!ns) return;
+  const action = ns.action;
+
+  if (action === 'recibido') {
+    if (!confirm('¿Confirmar que el equipo ya llegó a la tienda?')) return;
+    const { error } = await sb.from('sp_tickets').update({ status: 'equipo_recibido' }).eq('id', ticketId);
+    if (!error) {
+      // Notificar al cliente
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData?.sp_equipment?.brand || '';
+      const model = ticketData?.sp_equipment?.model || '';
+      const tNum  = ticketData?.ticket_number;
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: cu.phone,
+              message: `📦 *Focus Store Soporte*\n\nHola ${cu.full_name}, confirmamos que hemos recibido tu equipo *${brand} ${model}* en nuestra tienda.\n\n🎫 Ticket: #${tNum}\n\n🔔 Muy pronto recibirás una notificación cuando tu equipo sea asignado a un técnico para iniciar el diagnóstico.\n\n¡Gracias por tu paciencia! 🙏\n*Focus Store Honduras*`
+            })
+          });
+        } catch(_) {}
+      }
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'equipment_received', clientName: cu.full_name,
+              clientEmail: cu.email, ticketNumber: tNum,
+              deviceBrand: brand, deviceModel: model, portalToken: accessToken })
+          });
+        } catch(_) {}
+      }
+      showToast('📬 Equipo recibido — cliente notificado'); setTimeout(() => location.reload(), 800);
+    }
+  } else if (action === 'ver_panel_tecnico') {
+    window.open('https://soporte.focusstore.net/tecnico/index.html', '_blank');
+  } else if (action === 'asignar') {
+    document.getElementById('techSelect')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('techSelect')?.focus();
+    showToast('👇 Selecciona un técnico y guarda la asignación');
+  } else if (action === 'ver_cotizacion') {
+    document.getElementById('quoteIntBody')?.closest('.card')?.scrollIntoView({ behavior: 'smooth' });
+  } else if (action === 'cotizar_cliente') {
+    document.getElementById('quoteCliBody')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('👇 Completa la cotización al cliente');
+  } else if (action === 'en_reparacion') {
+    if (!confirm('¿El repuesto llegó? ¿Cambiar a En Reparación?')) return;
+    const { error } = await sb.from('sp_tickets').update({ status: 'en_reparacion' }).eq('id', ticketId);
+    if (!error) { showToast('🔧 Cambiado a En Reparación'); setTimeout(() => location.reload(), 800); }
+  } else if (action === 'en_pruebas') {
+    if (!confirm('¿La reparación está lista? ¿Cambiar a En Pruebas?')) return;
+    const { error } = await sb.from('sp_tickets').update({ status: 'en_pruebas' }).eq('id', ticketId);
+    if (!error) { showToast('🧪 Cambiado a En Pruebas'); setTimeout(() => location.reload(), 800); }
+  } else if (action === 'listo') {
+    if (!confirm('¿Las pruebas están OK? ¿Marcar como Listo para entrega?')) return;
+    const { error } = await sb.from('sp_tickets').update({ status: 'listo_para_entrega' }).eq('id', ticketId);
+    if (!error) {
+      const cu = ticketData?.sp_customers;
+      if (cu?.phone) { try { await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ to: cu.phone, message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu equipo ya puede ser recogido en nuestra tienda.\n\n📍 *Focus Store Honduras* 😊` }) }); } catch(_){} }
+      showToast('🎉 Listo — cliente notificado'); setTimeout(() => location.reload(), 800);
+    }
+  } else if (action === 'entregado') {
+    if (!confirm('¿Confirmar que el cliente recogió su equipo?')) return;
+    const { error } = await sb.from('sp_tickets').update({ status: 'entregado', delivered_at: new Date().toISOString() }).eq('id', ticketId);
+    if (!error) { showToast('✔ Ticket marcado como entregado'); setTimeout(() => location.reload(), 800); }
+  }
+}
+
+/* ── btnLoad — estado de carga para botones ──────────────────
+   Uso: const restore = btnLoad(btn, 'Guardando…');
+        // … async work …
+        restore(); // o se llama en finally
+──────────────────────────────────────────────────────────── */
+function btnLoad(btn, text) {
+  if (!btn) return () => {};
+  const origHTML = btn.innerHTML;
+  const origDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.innerHTML = `<span class="btn-spinner"></span>${text || 'Procesando…'}`;
+  return function restore() {
+    btn.disabled = origDisabled;
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = origHTML;
+  };
+}
+
+// ── Anti-cache ────────────────────────────────────────────────
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true); });
+(function(){ var t=0; document.addEventListener('visibilitychange', function(){
+  if (document.hidden) { t=Date.now(); } else if (t && Date.now()-t>90000) location.reload(true);
+}); })();
+</script>
+</body>
+</html>

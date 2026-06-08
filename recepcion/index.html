@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recepción · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+      --orange: #ff9f43;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar + main layout ──────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 30;
+      transition: transform .25s;
+    }
+    .sidebar-brand {
+      padding: 18px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .brand-name { font-size: 14px; font-weight: 700; }
+    .brand-sub  { font-size: 10px; color: var(--muted); }
+
+    .nav { flex: 1; padding: 10px 0; overflow-y: auto; }
+    .nav-section {
+      padding: 6px 14px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      margin: 1px 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .nav-item:hover   { background: var(--bg3); color: var(--text); }
+    .nav-item.active  { background: rgba(61,106,255,.15); color: #7090ff; }
+    .nav-item .ni     { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: white;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .nav-badge.green { background: var(--green); color: #0a0c10; }
+    .nav-badge.gold  { background: var(--gold); color: #0a0c10; }
+
+    /* User section at bottom of sidebar */
+    .sidebar-user {
+      padding: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .user-av {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .user-info-sb { flex: 1; min-width: 0; }
+    .user-info-sb h4 { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-info-sb p  { font-size: 10px; color: var(--muted); }
+    .logout-btn {
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color .2s;
+      background: none; border: none;
+    }
+    .logout-btn:hover { color: var(--red); }
+
+    /* ── Main content ────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      margin-left: 220px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────── */
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .topbar h2 { font-size: 17px; font-weight: 700; flex: 1; }
+    .btn-new {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-new:hover { background: #5278ff; }
+
+    /* ── Page body ───────────────────────────────────────────── */
+    .page-body { padding: 20px 24px; flex: 1; }
+
+    /* ── Stats ───────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-card.active { border-color: var(--accent); background: rgba(61,106,255,.07); }
+    .stat-value { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 5px; }
+    .stat-card.red   .stat-value { color: var(--red); }
+    .stat-card.gold  .stat-value { color: var(--gold); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.blue  .stat-value { color: var(--accent); }
+    .stat-card.muted .stat-value { color: var(--muted); }
+
+    /* ── Filters & Search ────────────────────────────────────── */
+    .filters-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 9px 14px 9px 38px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .2s;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+    .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 15px;
+      pointer-events: none;
+    }
+    .filter-select {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 9px 32px 9px 12px;
+      outline: none;
+      font-family: inherit;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+    .filter-select option { background: var(--bg3); }
+
+    /* ── Ticket table ────────────────────────────────────────── */
+    .ticket-table { width: 100%; }
+
+    .tkt-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 110px 1fr 130px 120px 100px;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .tkt-row:hover { border-color: var(--accent); background: rgba(61,106,255,.03); }
+
+    .tkt-num {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--accent);
+    }
+    .tkt-num .tkt-date { font-size: 10px; color: var(--muted); font-weight: 400; font-family: inherit; margin-top: 2px; }
+
+    .tkt-info h4 { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tkt-info p  { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .chip-azul    { background: rgba(61,106,255,.12); color: #7090ff; }
+    .chip-verde   { background: rgba(46,213,115,.12); color: var(--green); }
+    .chip-dorado  { background: rgba(245,200,66,.12); color: var(--gold); }
+    .chip-naranja { background: rgba(255,159,67,.12); color: var(--orange); }
+    .chip-rojo    { background: rgba(255,71,87,.12);  color: var(--red); }
+    .chip-gris    { background: rgba(136,146,164,.1); color: var(--muted); }
+
+    .tkt-tech {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mini-av {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
+
+    .tkt-days { font-size: 12px; color: var(--muted); text-align: right; }
+    .tkt-days.warn  { color: var(--gold); }
+    .tkt-days.alert { color: var(--red); }
+
+    /* Overdue alert badge */
+    .overdue-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(245,200,66,.12); border: 1px solid rgba(245,200,66,.35);
+      border-radius: 5px; font-size: 10px; padding: 2px 6px;
+      color: var(--gold); font-weight: 700; margin-left: 5px;
+      vertical-align: middle; white-space: nowrap;
+    }
+
+    /* ── Quick action button ─────────────────────────────────── */
+    .btn-quick {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(46,213,115,.12); border: 1px solid rgba(46,213,115,.35);
+      border-radius: 6px; font-size: 11px; font-weight: 700; padding: 3px 9px;
+      color: var(--green); cursor: pointer; margin-left: 6px;
+      vertical-align: middle; white-space: nowrap; font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-quick:hover { background: rgba(46,213,115,.25); border-color: var(--green); }
+
+    /* ── Loading / Empty ─────────────────────────────────────── */
+    .centered-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .centered-msg .big { font-size: 48px; margin-bottom: 12px; }
+    .centered-msg p    { font-size: 14px; }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Header row for table ────────────────────────────────── */
+    .table-header {
+      display: grid;
+      grid-template-columns: 110px 1fr 130px 120px 100px;
+      gap: 12px;
+      padding: 6px 16px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--muted);
+    }
+
+    /* ── Role-specific hide ──────────────────────────────────── */
+    .admin-only    { display: none; }
+    .auditor-hide  { display: none; }
+
+    /* ── Mobile: hide sidebar, show hamburger ────────────────── */
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 2px;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 29;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.show { display: block; }
+      .main { margin-left: 0; }
+      .hamburger { display: block; }
+      .tkt-row {
+        grid-template-columns: 90px 1fr 110px;
+        grid-template-rows: auto auto;
+      }
+      .tkt-tech, .tkt-days { display: none; }
+      .table-header { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .page-body { padding: 14px 12px; }
+      .topbar    { padding: 12px 14px; }
+    }
+
+    /* ── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: var(--green);
+      transition: transform .3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📷</div>
+      <div>
+        <div class="brand-name">Focus Store</div>
+        <div class="brand-sub">Soporte Técnico</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item active" href="index.html">
+        <span class="ni">🎫</span> Tickets
+        <span class="nav-badge" id="badgePending" style="display:none">0</span>
+      </a>
+      <a class="nav-item" href="nuevo-ticket.html">
+        <span class="ni">➕</span> Nuevo ticket
+      </a>
+
+      <!-- Admin section — shown immediately via inline script -->
+      <div id="navAdminSection" style="display:none">
+        <div class="nav-section">Administración</div>
+        <a class="nav-item" href="../admin/index.html">
+          <span class="ni">👥</span> Gestión de personal
+        </a>
+        <a class="nav-item" href="../admin/precios.html">
+          <span class="ni">💰</span> Catálogo de precios
+        </a>
+      </div>
+      <script>(function(){try{var s=JSON.parse(localStorage.getItem('sp_session')||'null');if(s&&['admin','supervisor'].includes(s.role))document.getElementById('navAdminSection').style.display='block';}catch(_){}})();</script>
+
+      <div class="nav-section">Herramientas</div>
+      <a class="nav-item" href="../tecnico/index.html">
+        <span class="ni">🔧</span> Vista técnico
+      </a>
+      <a class="nav-item" href="../ingreso.html" target="_blank">
+        <span class="ni">🌐</span> Ingreso público
+      </a>
+      <a class="nav-item" href="../ingreso.html?mode=presencial" target="_blank">
+        <span class="ni">📍</span> Ingreso presencial
+      </a>
+    </div>
+
+    <div class="sidebar-user" id="sidebarUser">
+      <div class="user-av" id="navAvatar">?</div>
+      <div class="user-info-sb">
+        <h4 id="navName">—</h4>
+        <p id="navRole">—</p>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Cerrar sesión">⏻</button>
+    </div>
+  </nav>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <button class="hamburger" onclick="openSidebar()">☰</button>
+      <h2>Tickets de soporte</h2>
+      <a href="nuevo-ticket.html" class="btn-new">+ Nuevo ticket</a>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card blue" onclick="filterByStatus('')" id="statAll">
+          <div class="stat-value" id="statAllN">—</div>
+          <div class="stat-label">Tickets activos</div>
+        </div>
+        <div class="stat-card gold" onclick="filterByStatus('esperando_aprobacion')" id="statApproval">
+          <div class="stat-value" id="statApprovalN">—</div>
+          <div class="stat-label">Esperando aprobación</div>
+        </div>
+        <div class="stat-card green" onclick="filterByStatus('listo_para_entrega')" id="statReady">
+          <div class="stat-value" id="statReadyN">—</div>
+          <div class="stat-label">Listos para retiro</div>
+        </div>
+        <div class="stat-card red" onclick="filterByStatus('esperando_repuesto')" id="statParts">
+          <div class="stat-value" id="statPartsN">—</div>
+          <div class="stat-label">Esperando repuesto</div>
+        </div>
+        <div class="stat-card orange" onclick="filterByStatus('esperando_aprobacion')" id="statQuotes" style="position:relative">
+          <div class="stat-value" id="statQuotesN">—</div>
+          <div class="stat-label">Cotiz. técnico pendientes</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-row">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Buscar por ticket, cliente, equipo…"
+            oninput="applyFilters()">
+        </div>
+        <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+          <option value="">Todos los estados</option>
+          <option value="solicitud_recibida">📝 Solicitud recibida</option>
+          <option value="equipo_en_camino">🚚 Equipo en camino</option>
+          <option value="equipo_recibido">📬 Equipo recibido</option>
+          <option value="en_diagnostico">🔍 En diagnóstico</option>
+          <option value="esperando_aprobacion">⚡ Esperando aprobación</option>
+          <option value="aprobado_reparacion">✅ Aprobado reparación</option>
+          <option value="esperando_repuesto">📦 Esperando repuesto</option>
+          <option value="en_reparacion">🔧 En reparación</option>
+          <option value="en_pruebas">🧪 En pruebas</option>
+          <option value="listo_para_entrega">🎉 Listo para retiro</option>
+          <option value="entregado">✔ Entregado</option>
+          <option value="cerrado">🔒 Cerrado</option>
+          <option value="cancelado">✗ Cancelado</option>
+          <option value="irreparable">⛔ No reparable</option>
+          <option value="abandonado">⚠️ Abandonado</option>
+        </select>
+        <select class="filter-select" id="originFilter" onchange="applyFilters()">
+          <option value="">Todos los orígenes</option>
+          <option value="cliente_presencial">📍 Presencial</option>
+          <option value="staff_presencial">🧑‍💼 Staff presencial</option>
+          <option value="staff_telefono">📞 Staff teléfono</option>
+          <option value="cliente_remoto">🌐 Remoto</option>
+        </select>
+      </div>
+
+      <!-- Table header -->
+      <div class="table-header">
+        <div>Ticket</div>
+        <div>Cliente / Equipo</div>
+        <div>Estado</div>
+        <div>Técnico</div>
+        <div style="text-align:right">Días</div>
+      </div>
+
+      <!-- Ticket list -->
+      <div id="ticketList">
+        <div class="centered-msg">
+          <div class="spinner"></div>
+          <p>Cargando tickets…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const STATUS_MAP = {
+  solicitud_recibida:   { label: '📝 Solicitud',    chip: 'chip-azul' },
+  equipo_en_camino:     { label: '🚚 En camino',    chip: 'chip-dorado' },
+  equipo_recibido:      { label: '📬 Recibido',     chip: 'chip-verde' },
+  en_diagnostico:       { label: '🔍 Diagnóstico',  chip: 'chip-azul' },
+  esperando_aprobacion: { label: '⚡ Cotización',   chip: 'chip-dorado' },
+  aprobado_reparacion:  { label: '✅ Aprobado',     chip: 'chip-verde' },
+  esperando_repuesto:   { label: '📦 Repuesto',     chip: 'chip-naranja' },
+  en_reparacion:        { label: '🔧 Reparando',    chip: 'chip-azul' },
+  en_pruebas:           { label: '🧪 En pruebas',   chip: 'chip-azul' },
+  listo_para_entrega:   { label: '🎉 Listo retiro', chip: 'chip-verde' },
+  entregado:            { label: '✔ Entregado',     chip: 'chip-gris' },
+  cerrado:              { label: '🔒 Cerrado',       chip: 'chip-gris' },
+  cancelado:            { label: '✗ Cancelado',     chip: 'chip-rojo' },
+  irreparable:          { label: '⛔ Irreparable',  chip: 'chip-rojo' },
+  abandonado:           { label: '⚠️ Abandonado',   chip: 'chip-rojo' }
+};
+
+const CAT_ICONS = {
+  camara:'📷',lente:'🔭',flash:'⚡',luz:'💡',audio:'🎙',
+  gimbal:'🎬',drone:'🚁',computadora:'💻',monitor:'🖥',tripode:'📸',otro:'🔧'
+};
+
+let allTickets  = [];
+let techProfiles = {};
+let session     = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', async () => {
+  session = getSession();
+  if (!session) { location.href = '../login.html'; return; }
+
+  // Técnicos tienen su propio panel — no pueden entrar aquí
+  if (session.role === 'tecnico') { location.href = '../tecnico/index.html'; return; }
+
+  renderUserNav();
+  await loadProfiles();
+  await loadTickets();
+});
+
+function getSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
+    if (!s) return null;
+    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) {
+      localStorage.removeItem('sp_session');
+      return null;
+    }
+    return s;
+  } catch (_) { return null; }
+}
+
+function renderUserNav() {
+  const av = document.getElementById('navAvatar');
+  const nm = document.getElementById('navName');
+  const rl = document.getElementById('navRole');
+  const ROLE_LABELS = {
+    admin:'Administrador', supervisor:'Supervisor',
+    recepcion:'Recepción', tecnico:'Técnico', auditor:'Auditor'
+  };
+
+  av.textContent      = session.avatar || session.full_name[0];
+  av.style.background = (session.color || '#3d6aff') + '33';
+  av.style.color      = session.color || '#3d6aff';
+  nm.textContent      = session.full_name;
+  rl.textContent      = ROLE_LABELS[session.role] || session.role;
+
+  // Show admin section only for admin/supervisor
+  if (['admin','supervisor'].includes(session.role)) {
+    document.getElementById('navAdminSection').style.display = 'block';
+  }
+}
+
+async function loadProfiles() {
+  const { data } = await sb.from('sp_profiles').select('id,full_name,role,color,avatar');
+  if (data) {
+    data.forEach(p => { techProfiles[p.id] = p; });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOAD TICKETS
+═══════════════════════════════════════════════════════════════ */
+async function loadTickets() {
+  try {
+    const { data, error } = await sb
+      .from('sp_tickets')
+      .select(`
+        id, ticket_number, status, ticket_origin, created_at, status_changed_at,
+        reported_fault, assigned_to,
+        sp_customers!sp_tickets_customer_id_fkey (full_name, phone),
+        sp_equipment!sp_tickets_equipment_id_fkey (category, brand, model)
+      `)
+      .not('status', 'in', '(cerrado,entregado,cancelado,abandonado)')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    allTickets = data || [];
+
+    // Contar cotizaciones internas pendientes de revisión
+    const { count: pendingQuotes } = await sb
+      .from('sp_repair_quotes')
+      .select('id', { count: 'exact', head: true })
+      .eq('quote_type', 'interna')
+      .eq('status', 'pendiente');
+
+    updateStats(pendingQuotes || 0);
+    renderTickets(allTickets);
+
+  } catch (ex) {
+    console.error(ex);
+    document.getElementById('ticketList').innerHTML = `
+      <div class="centered-msg">
+        <div class="big">⚠️</div>
+        <p>Error al cargar tickets. <a href="#" onclick="loadTickets()" style="color:var(--accent)">Reintentar</a></p>
+      </div>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATS
+═══════════════════════════════════════════════════════════════ */
+function updateStats(pendingQuotes = 0) {
+  const active   = allTickets.length;
+  const approval = allTickets.filter(t => t.status === 'esperando_aprobacion').length;
+  const ready    = allTickets.filter(t => t.status === 'listo_para_entrega').length;
+  const parts    = allTickets.filter(t => t.status === 'esperando_repuesto').length;
+
+  document.getElementById('statAllN').textContent      = active;
+  document.getElementById('statApprovalN').textContent = approval;
+  document.getElementById('statReadyN').textContent    = ready;
+  document.getElementById('statPartsN').textContent    = parts;
+  document.getElementById('statQuotesN').textContent   = pendingQuotes;
+
+  // Resaltar tarjeta si hay cotizaciones pendientes
+  document.getElementById('statQuotes').classList.toggle('active', pendingQuotes > 0);
+
+  // Badge in sidebar
+  const totalAlert = approval + pendingQuotes;
+  if (totalAlert > 0) {
+    document.getElementById('badgePending').textContent = totalAlert;
+    document.getElementById('badgePending').style.display = 'inline';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FILTER
+═══════════════════════════════════════════════════════════════ */
+function filterByStatus(status) {
+  document.getElementById('statusFilter').value = status;
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const origin = document.getElementById('originFilter').value;
+
+  let filtered = allTickets;
+
+  if (status) filtered = filtered.filter(t => t.status === status);
+  if (origin) filtered = filtered.filter(t => t.ticket_origin === origin);
+
+  if (search) {
+    filtered = filtered.filter(t => {
+      const cn = t.sp_customers?.full_name?.toLowerCase() || '';
+      const eq = `${t.sp_equipment?.brand} ${t.sp_equipment?.model}`.toLowerCase();
+      return t.ticket_number.toLowerCase().includes(search) ||
+             cn.includes(search) || eq.includes(search);
+    });
+  }
+
+  renderTickets(filtered);
+
+  // Highlight active stat card
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════════ */
+function renderTickets(tickets) {
+  const list = document.getElementById('ticketList');
+
+  if (!tickets.length) {
+    list.innerHTML = `
+      <div class="centered-msg">
+        <div class="big">🎉</div>
+        <p>No hay tickets que coincidan.</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = tickets.map(t => {
+    const st   = STATUS_MAP[t.status] || { label: t.status, chip: 'chip-gris' };
+    const eq   = t.sp_equipment;
+    const cust = t.sp_customers;
+    const days = Math.floor((Date.now() - new Date(t.created_at)) / 86400000);
+    const tech = t.assigned_to ? techProfiles[t.assigned_to] : null;
+
+    const daysClass = days > 30 ? 'alert' : days > 15 ? 'warn' : '';
+
+    // Overdue alert badge
+    const hoursInStatus = (Date.now() - new Date(t.status_changed_at || t.created_at)) / 3_600_000;
+    let overdueHTML = '';
+    if (t.status === 'equipo_recibido' && hoursInStatus > 48) {
+      overdueHTML = `<span class="overdue-badge" title="${Math.floor(hoursInStatus)}h en este estado">⚠️ +48h</span>`;
+    } else if (t.status === 'en_diagnostico' && hoursInStatus > 96) {
+      overdueHTML = `<span class="overdue-badge" title="${Math.floor(hoursInStatus)}h en este estado">⚠️ +96h</span>`;
+    }
+
+    const techHTML = tech
+      ? `<span class="mini-av" style="background:${tech.color||'#3d6aff'}33;color:${tech.color||'#3d6aff'}">${tech.avatar||tech.full_name[0]}</span>
+         <span>${tech.full_name.split(' ')[0]}</span>`
+      : `<span style="color:var(--muted)">Sin asignar</span>`;
+
+    const originMap = {
+      cliente_presencial:'📍',staff_presencial:'🧑‍💼',
+      staff_telefono:'📞',cliente_remoto:'🌐'
+    };
+
+    return `<a class="tkt-row" href="ticket.html?id=${t.id}&_v=${Date.now()}">
+      <div class="tkt-num">
+        ${t.ticket_number}
+        <div class="tkt-date">${fmtDateShort(t.created_at)} ${originMap[t.ticket_origin]||''}</div>
+      </div>
+      <div class="tkt-info">
+        <h4>${cust?.full_name || 'Sin cliente'}</h4>
+        <p>${CAT_ICONS[eq?.category]||'🔧'} ${eq?.brand||''} ${eq?.model||''}</p>
+      </div>
+      <div>
+        <span class="status-chip ${st.chip}">${st.label}</span>${overdueHTML}
+        ${(t.status === 'solicitud_recibida' || t.status === 'equipo_en_camino')
+          ? `<button class="btn-quick" onclick="marcarRecibido('${t.id}',event)">📬 Recibido</button>`
+          : ''}
+      </div>
+      <div class="tkt-tech">${techHTML}</div>
+      <div class="tkt-days ${daysClass}">${days}d</div>
+    </a>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════════════ */
+function openSidebar()  {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════════════ */
+function logout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  localStorage.removeItem('sp_session');
+  location.href = '../login.html';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════ */
+function fmtDateShort(iso) {
+  return new Date(iso).toLocaleDateString('es-HN', { day:'2-digit', month:'short' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+/* ── Marcar equipo como recibido (acción rápida desde la lista) ── */
+async function marcarRecibido(ticketId, e) {
+  e.preventDefault(); e.stopPropagation();
+  try {
+    const { error } = await sb.from('sp_tickets')
+      .update({ status: 'equipo_recibido' })
+      .eq('id', ticketId);
+    if (error) throw error;
+    showToast('📬 Equipo marcado como recibido');
+    setTimeout(() => loadTickets(), 600);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+// ── Anti-cache ────────────────────────────────────────────────
+window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true); });
+(function(){ var t=0; document.addEventListener('visibilitychange', function(){
+  if (document.hidden) { t=Date.now(); } else if (t && Date.now()-t>90000) location.reload(true);
+}); })();
+</script>
+</body>
+</html>
