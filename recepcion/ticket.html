@@ -448,7 +448,10 @@
       </div>
       <div id="nextStepText" style="font-size:14px;color:var(--text);font-weight:600"></div>
     </div>
-    <button id="nextStepBtn" onclick="doNextStep()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap"></button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="nextStepBtn" onclick="doNextStep()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap"></button>
+      <button id="nextStepBtn2" onclick="approveDirectly()" style="display:none;background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">⚡ Aprobar directo (sin cliente)</button>
+    </div>
   </div>
 
   <div class="page">
@@ -1986,6 +1989,49 @@ async function approveInternalQuote(qId) {
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
 
+/* ── Approve directly (skip client quote) ────────────────────── */
+async function approveDirectly() {
+  if (!confirm('¿Aprobar la reparación directamente sin enviar cotización al cliente?\n\nEl técnico será notificado para comenzar.')) return;
+  try {
+    const { error } = await sb.from('sp_tickets').update({
+      status: 'aprobado_reparacion',
+      status_changed_at: new Date().toISOString()
+    }).eq('id', ticketId);
+    if (error) throw error;
+
+    // Notificar al técnico que puede iniciar
+    const techId = ticketData?.assigned_to;
+    if (techId && techProfiles[techId]) {
+      const tech  = techProfiles[techId];
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      if (tech.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: tech.phone,
+              message: `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el Ticket *#${tNum}* fue aprobado para reparación.\n\n💻 Equipo: ${brand} ${model}\n\nPuedes iniciar la reparación cuando estés listo.\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
+          });
+        } catch(_) {}
+      }
+      if (tech.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ techEmail: tech.email, techName: tech.full_name,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              reportedFault: '🔧 Reparación aprobada directamente por administrador. Puedes iniciar cuando estés listo.' })
+          });
+        } catch(_) {}
+      }
+    }
+
+    showToast('✅ Reparación aprobada — técnico notificado');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
 /* ── Reject modal ────────────────────────────────────────────── */
 function openRejectModal(qId, type) {
   rejectTarget = { qId, type };
@@ -2266,6 +2312,7 @@ const NEXT_STEPS = {
   equipo_recibido:      { text: 'Asigna un técnico para iniciar el diagnóstico del equipo.',          btn: '🔍 Asignar técnico',             color: '#3d6aff', action: 'asignar' },
   en_diagnostico:       { text: 'Esperando que el técnico envíe su cotización interna.',              btn: '👁 Ver cotización técnico',       color: '#8892a4', action: 'ver_cotizacion' },
   esperando_aprobacion: { text: 'El técnico envió su cotización. Revísala para aprobar o rechazar.',  btn: '✅ Revisar cotización',          color: '#f5c842', action: 'ver_cotizacion' },
+  esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: true },
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
   esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
@@ -2284,6 +2331,10 @@ function renderNextStep(status) {
   if (status === 'aprobado_reparacion' && quoteInternal?.status === 'aprobada') {
     effectiveStatus = 'aprobado_reparacion_listo';
   }
+  // Caso especial: esperando_aprobacion + cotización interna ya aprobada → mostrar opción de aprobar directo
+  if (status === 'esperando_aprobacion' && quoteInternal?.status === 'aprobada') {
+    effectiveStatus = 'esperando_aprobacion_interna_ok';
+  }
 
   const ns = NEXT_STEPS[effectiveStatus];
   if (!ns) { banner.style.display = 'none'; return; }
@@ -2292,6 +2343,11 @@ function renderNextStep(status) {
   btn.textContent      = ns.btn;
   btn.style.background = ns.color;
   btn.style.color      = ['#f5c842','#2ed573','#ff9f43','#a29bfe'].includes(ns.color) ? '#1a1f2e' : '#fff';
+
+  // Mostrar u ocultar botón secundario "Aprobar directo"
+  const btn2 = document.getElementById('nextStepBtn2');
+  if (btn2) btn2.style.display = ns.btn2 ? 'inline-block' : 'none';
+
   banner.style.display = 'flex';
 
   // Badge de tiempo en el estado actual
@@ -2315,7 +2371,13 @@ function renderNextStep(status) {
 
 async function doNextStep() {
   const status = ticketData?.status;
-  const ns = NEXT_STEPS[status];
+
+  // Misma lógica de effectiveStatus que renderNextStep
+  let effectiveStatus = status;
+  if (status === 'aprobado_reparacion' && quoteInternal?.status === 'aprobada') effectiveStatus = 'aprobado_reparacion_listo';
+  if (status === 'esperando_aprobacion' && quoteInternal?.status === 'aprobada') effectiveStatus = 'esperando_aprobacion_interna_ok';
+
+  const ns = NEXT_STEPS[effectiveStatus];
   if (!ns) return;
   const action = ns.action;
 
