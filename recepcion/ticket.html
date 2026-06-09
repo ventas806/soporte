@@ -573,6 +573,7 @@
               <option value="en_diagnostico">🔍 En diagnóstico</option>
               <option value="esperando_aprobacion">⚡ Esperando aprobación</option>
               <option value="aprobado_reparacion">✅ Reparación aprobada</option>
+              <option value="pendiente_pago">💳 Pago pendiente</option>
               <option value="esperando_repuesto">📦 Esperando repuesto</option>
               <option value="en_reparacion">🔧 En reparación</option>
               <option value="en_pruebas">🧪 En pruebas</option>
@@ -633,6 +634,9 @@
 
         </div>
       </div>
+
+      <!-- ── Card de pago pendiente ────────────────────────── -->
+      <div class="card" id="paymentCard" style="display:none;padding:16px"></div>
 
       <!-- ── Fecha límite de diagnóstico ──────────────────── -->
       <div class="card" id="diagnosisDeadlineCard" style="display:none;padding:16px"></div>
@@ -757,6 +761,7 @@ const STATUS_MAP = {
   en_diagnostico:       { label: '🔍 En diagnóstico',       pill: 'pill-azul' },
   esperando_aprobacion: { label: '⚡ Esperando aprobación', pill: 'pill-dorado' },
   aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde' },
+  pendiente_pago:       { label: '💳 Pago pendiente',       pill: 'pill-naranja' },
   esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja' },
   en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul' },
   en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul' },
@@ -948,6 +953,9 @@ function renderTicket(t, history, msgs, notes) {
   // Portal link — dominio oficial del cliente
   const link = 'https://soporte.focusstore.net/portal.html?token=' + encodeURIComponent(t.access_token);
   document.getElementById('portalLinkBox').textContent = link;
+
+  // Card de pago pendiente
+  renderPaymentCard(t);
 
   // Fecha límite de diagnóstico
   renderDiagnosisDeadlineCard(t);
@@ -1991,9 +1999,149 @@ async function approveInternalQuote(qId) {
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
 
-/* ── Approve directly (skip client quote) ────────────────────── */
+/* ── Approve directly (skip client quote) → pendiente_pago ─────── */
 async function approveDirectly() {
-  if (!confirm('¿Aprobar la reparación directamente sin enviar cotización al cliente?\n\nEl técnico será notificado para comenzar.')) return;
+  if (!confirm('¿Aprobar la reparación directamente sin enviar cotización al cliente?')) return;
+  try {
+    const { error } = await sb.from('sp_tickets').update({
+      status: 'pendiente_pago',
+      status_changed_at: new Date().toISOString()
+    }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Aprobado — define el monto de pago en el card "Pago pendiente"');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Payment card ────────────────────────────────────────────────── */
+const BANK_ACCOUNTS_WA = `🏦 *Cuentas de ahorro — Billy Estrada:*\n• Ficohsa: 200008458676\n• Occidente: 214430002010\n• Atlántida: 13320128336\n• BAC: 720650131\n• Ban País: 213130022882`;
+const BANK_ACCOUNTS_HTML = `
+  <div style="font-size:12px;color:var(--muted);margin-top:12px;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">🏦 Cuentas de ahorro</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <tr><td style="color:var(--muted);padding:3px 0">Ficohsa</td><td style="font-weight:700;text-align:right">200008458676</td></tr>
+      <tr><td style="color:var(--muted);padding:3px 0">Occidente</td><td style="font-weight:700;text-align:right">214430002010</td></tr>
+      <tr><td style="color:var(--muted);padding:3px 0">Atlántida</td><td style="font-weight:700;text-align:right">13320128336</td></tr>
+      <tr><td style="color:var(--muted);padding:3px 0">BAC</td><td style="font-weight:700;text-align:right">720650131</td></tr>
+      <tr><td style="color:var(--muted);padding:3px 0">Ban País</td><td style="font-weight:700;text-align:right">213130022882</td></tr>
+    </table>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">A nombre de: <strong>Billy Estrada</strong></div>
+  </div>`;
+
+function renderPaymentCard(t) {
+  const el = document.getElementById('paymentCard');
+  if (!el) return;
+  if (t.status !== 'pendiente_pago') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  const isAdmin = ['admin','supervisor'].includes(session?.role);
+  const amtSet  = t.payment_amount && parseFloat(t.payment_amount) > 0;
+  const amtFmt  = amtSet ? `L. ${parseFloat(t.payment_amount).toLocaleString('es-HN',{minimumFractionDigits:2})}` : '—';
+  const notified = t.payment_notified_at;
+  const notifBadge = notified
+    ? `<div style="font-size:11px;color:var(--green);margin-top:6px">✅ Instrucciones enviadas el ${new Date(notified).toLocaleDateString('es-HN',{dateStyle:'medium'})}</div>`
+    : `<div style="font-size:11px;color:var(--gold);margin-top:6px">⏳ Instrucciones pendientes de enviar</div>`;
+
+  let adminControls = '';
+  if (isAdmin) {
+    adminControls = `
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px">Definir monto a cobrar</div>
+        <select id="payPctSelect" onchange="onPayPctChange()" style="width:100%;margin-bottom:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;font-family:inherit">
+          <option value="custom">Monto fijo (L.)</option>
+          <option value="50">50% del total cotizado</option>
+          <option value="100">100% del total cotizado</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="payAmountInput" type="number" min="0" step="0.01" placeholder="Monto en L."
+            style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;font-family:inherit"
+            value="${amtSet ? parseFloat(t.payment_amount) : ''}">
+          <button onclick="savePaymentAmount()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">💾 Guardar</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button onclick="sendPaymentNotification(this)" ${!amtSet?'disabled style="opacity:.5;cursor:not-allowed"':''} style="background:#ff9f43;color:#1a1f2e;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+            📤 Enviar instrucciones al cliente
+          </button>
+          <button onclick="confirmPaymentReceived(this)" style="background:var(--green);color:#1a1f2e;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+            ✅ Confirmar pago recibido
+          </button>
+          <button onclick="skipPayment()" style="background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit">
+            Sin anticipo → Continuar sin cobro
+          </button>
+        </div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gold);margin-bottom:10px">💳 Pago pendiente</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--muted)">Monto a cobrar</span>
+      <span style="font-size:18px;font-weight:800;color:var(--gold)">${amtFmt}</span>
+    </div>
+    ${notifBadge}
+    ${BANK_ACCOUNTS_HTML}
+    ${adminControls}`;
+}
+
+function onPayPctChange() {
+  const sel = document.getElementById('payPctSelect');
+  const inp = document.getElementById('payAmountInput');
+  if (!sel || !inp) return;
+  if (sel.value === 'custom') { inp.removeAttribute('readonly'); inp.focus(); return; }
+  const pct   = parseInt(sel.value) / 100;
+  const total = quoteClient ? parseFloat(quoteClient.total || 0) : 0;
+  if (!total) { showToast('⚠️ No se encontró cotización al cliente para calcular el porcentaje'); return; }
+  inp.value = (total * pct).toFixed(2);
+  inp.setAttribute('readonly', 'true');
+}
+
+async function savePaymentAmount() {
+  const inp = document.getElementById('payAmountInput');
+  const amt = parseFloat(inp?.value || '0');
+  if (!amt || amt <= 0) { showToast('⚠️ Ingresa un monto válido'); return; }
+  const { error } = await sb.from('sp_tickets').update({ payment_amount: amt }).eq('id', ticketId);
+  if (error) { showToast('⚠️ Error: ' + error.message); return; }
+  showToast('💾 Monto guardado');
+  setTimeout(() => location.reload(), 700);
+}
+
+async function sendPaymentNotification(btn) {
+  const restore = btnLoad(btn, 'Enviando…');
+  try {
+    const cu   = ticketData?.sp_customers;
+    const eq   = ticketData?.sp_equipment;
+    const tNum = ticketData?.ticket_number;
+    const amt  = parseFloat(ticketData?.payment_amount || 0);
+    const amtFmt = amt.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+    const portal = `https://soporte.focusstore.net/portal.html?token=${encodeURIComponent(ticketData?.access_token || '')}`;
+
+    if (cu?.phone) {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: cu.phone,
+          message: `💳 *Focus Store — Instrucciones de Pago*\n\nHola ${cu.full_name}, para iniciar la reparación de tu *${eq?.brand||''} ${eq?.model||''}* (Ticket *#${tNum}*) debes realizar un anticipo de:\n\n💵 *L. ${amtFmt}*\n\n${BANK_ACCOUNTS_WA}\n\n⚠️ La reparación iniciará una vez confirmemos tu pago.\n\n📋 Ver tu ticket:\n${portal}` })
+      });
+    }
+    if (cu?.email) {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'payment_required', clientName: cu.full_name, clientEmail: cu.email,
+          ticketNumber: tNum, deviceBrand: eq?.brand||'', deviceModel: eq?.model||'',
+          paymentAmount: amtFmt, portalToken: ticketData?.access_token||''
+        })
+      });
+    }
+    await sb.from('sp_tickets').update({ payment_notified_at: new Date().toISOString() }).eq('id', ticketId);
+    showToast('📤 Instrucciones enviadas por WhatsApp y email');
+    setTimeout(() => location.reload(), 1000);
+  } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
+  finally { restore(); }
+}
+
+async function confirmPaymentReceived(btn) {
+  if (!confirm('¿Confirmas que recibiste el pago?\n\nEl técnico será notificado para iniciar la reparación.')) return;
+  const restore = btnLoad(btn, 'Confirmando…');
   try {
     const { error } = await sb.from('sp_tickets').update({
       status: 'aprobado_reparacion',
@@ -2001,31 +2149,25 @@ async function approveDirectly() {
     }).eq('id', ticketId);
     if (error) throw error;
 
-    // Notificar al técnico que puede iniciar
+    // Notificar al técnico
     const techId = ticketData?.assigned_to;
     if (techId && techProfiles[techId]) {
       const tech  = techProfiles[techId];
       const brand = ticketData.sp_equipment?.brand || '';
       const model = ticketData.sp_equipment?.model || '';
       const tNum  = ticketData.ticket_number;
+      const repDeadline = ticketData?.repair_expected_at;
+      const daysLeft = repDeadline
+        ? Math.ceil((new Date(repDeadline+'T12:00:00').getTime()-Date.now())/86400000) : 0;
+      const deadlineStr = repDeadline
+        ? new Date(repDeadline+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      const entregaLine = daysLeft > 0 ? `📅 Fecha límite de entrega: *${deadlineStr}* (${daysLeft} día(s))` : '';
       if (tech.phone) {
         try {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: tech.phone,
-              message: (() => {
-                const repDeadline = ticketData?.repair_expected_at;
-                const daysLeft = repDeadline
-                  ? Math.ceil((new Date(repDeadline + 'T12:00:00').getTime() - Date.now()) / 86400000)
-                  : ((quoteInternal?.repair_days || 0) + (quoteInternal?.parts_days || 0) + (quoteInternal?.testing_days || 0));
-                const deadlineStr = repDeadline
-                  ? new Date(repDeadline + 'T12:00:00').toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : '';
-                const entregaLine = daysLeft > 0
-                  ? `📅 Fecha límite de entrega: *${deadlineStr}* (${daysLeft} día(s))`
-                  : `📅 Tiempo estimado: *${Math.abs(daysLeft)} día(s)*`;
-                return `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el Ticket *#${tNum}* fue aprobado para reparación.\n\n💻 Equipo: ${brand} ${model}\n\n⚡ Tienes *24 horas* para iniciar la reparación\n${entregaLine}\n\n🔗 https://soporte.focusstore.net/tecnico/index.html`;
-              })() })
+              message: `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el pago del Ticket *#${tNum}* fue confirmado. Puedes iniciar la reparación.\n\n💻 Equipo: ${brand} ${model}\n\n⚡ Tienes *24 horas* para iniciar\n${entregaLine}\n\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
           });
         } catch(_) {}
       }
@@ -2035,15 +2177,24 @@ async function approveDirectly() {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ techEmail: tech.email, techName: tech.full_name,
               ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
-              reportedFault: '🔧 Reparación aprobada directamente por administrador. Puedes iniciar cuando estés listo.' })
+              reportedFault: '💳 Pago confirmado. Tienes 24h para iniciar la reparación.' })
           });
         } catch(_) {}
       }
     }
-
-    showToast('✅ Reparación aprobada — técnico notificado');
+    showToast('✅ Pago confirmado — técnico notificado');
     setTimeout(() => location.reload(), 800);
-  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+  } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
+  finally { restore(); }
+}
+
+async function skipPayment() {
+  if (!confirm('¿Continuar sin cobrar anticipo?\n\nEl ticket pasará a "Reparación aprobada".')) return;
+  const { error } = await sb.from('sp_tickets').update({
+    status: 'aprobado_reparacion', status_changed_at: new Date().toISOString()
+  }).eq('id', ticketId);
+  if (!error) { showToast('✅ Sin cobro — listo para reparación'); setTimeout(() => location.reload(), 700); }
+  else showToast('⚠️ Error: ' + error.message);
 }
 
 /* ── Reject modal ────────────────────────────────────────────── */
@@ -2329,6 +2480,7 @@ const NEXT_STEPS = {
   esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: true },
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
+  pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago' },
   esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
   en_reparacion:        { text: 'El equipo está en reparación. Actualiza cuando termine.',            btn: '🧪 Reparación lista → Pruebas',  color: '#3d6aff', action: 'en_pruebas' },
   en_pruebas:           { text: 'El equipo está en pruebas. Cuando todo esté OK, márcalo listo.',     btn: '🎉 Pruebas OK → Listo',          color: '#a29bfe', action: 'listo' },
@@ -2437,6 +2589,9 @@ async function doNextStep() {
   } else if (action === 'cotizar_cliente') {
     document.getElementById('quoteCliBody')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     showToast('👇 Completa la cotización al cliente');
+  } else if (action === 'ver_pago') {
+    document.getElementById('paymentCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('💳 Define el monto y envía las instrucciones al cliente');
   } else if (action === 'en_reparacion') {
     if (!confirm('¿El repuesto llegó? ¿Cambiar a En Reparación?')) return;
     const { error } = await sb.from('sp_tickets').update({ status: 'en_reparacion' }).eq('id', ticketId);
