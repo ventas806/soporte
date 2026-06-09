@@ -1943,8 +1943,10 @@ async function approveInternalQuote(qId) {
     if (error) throw error;
 
     // Calcular y guardar fecha límite automáticamente (días estimados de la cotización del técnico)
+    const totalDays = quoteInternal
+      ? (quoteInternal.repair_days || 0) + (quoteInternal.parts_days || 0) + (quoteInternal.testing_days || 0)
+      : 0;
     if (quoteInternal) {
-      const totalDays = (quoteInternal.repair_days || 0) + (quoteInternal.parts_days || 0) + (quoteInternal.testing_days || 0);
       if (totalDays > 0) {
         const deadline = new Date();
         deadline.setDate(deadline.getDate() + totalDays);
@@ -1968,7 +1970,7 @@ async function approveInternalQuote(qId) {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: tech.phone,
-              message: `✅ *Focus Store — Cotización Aprobada*\n\nHola ${tech.full_name}, tu cotización para el Ticket *#${tNum}* fue aprobada por Focus Store.\n\n💻 Equipo: ${brand} ${model}\n\nPronto te avisaremos para iniciar la reparación cuando el cliente confirme.\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
+              message: `✅ *Focus Store — Cotización Aprobada*\n\nHola ${tech.full_name}, tu cotización para el Ticket *#${tNum}* fue aprobada por Focus Store.\n\n💻 Equipo: ${brand} ${model}\n\nUna vez el cliente confirme:\n⚡ Tendrás *24 horas* para iniciar la reparación\n📅 Tiempo estimado de entrega: *${totalDays > 0 ? totalDays + ' día(s)' : 'por definir'}*\n\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
           });
         } catch(_) {}
       }
@@ -2011,7 +2013,19 @@ async function approveDirectly() {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: tech.phone,
-              message: `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el Ticket *#${tNum}* fue aprobado para reparación.\n\n💻 Equipo: ${brand} ${model}\n\nPuedes iniciar la reparación cuando estés listo.\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
+              message: (() => {
+                const repDeadline = ticketData?.repair_expected_at;
+                const daysLeft = repDeadline
+                  ? Math.ceil((new Date(repDeadline + 'T12:00:00').getTime() - Date.now()) / 86400000)
+                  : ((quoteInternal?.repair_days || 0) + (quoteInternal?.parts_days || 0) + (quoteInternal?.testing_days || 0));
+                const deadlineStr = repDeadline
+                  ? new Date(repDeadline + 'T12:00:00').toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '';
+                const entregaLine = daysLeft > 0
+                  ? `📅 Fecha límite de entrega: *${deadlineStr}* (${daysLeft} día(s))`
+                  : `📅 Tiempo estimado: *${Math.abs(daysLeft)} día(s)*`;
+                return `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el Ticket *#${tNum}* fue aprobado para reparación.\n\n💻 Equipo: ${brand} ${model}\n\n⚡ Tienes *24 horas* para iniciar la reparación\n${entregaLine}\n\n🔗 https://soporte.focusstore.net/tecnico/index.html`;
+              })() })
           });
         } catch(_) {}
       }
