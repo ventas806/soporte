@@ -583,6 +583,51 @@ async function addNote(ticketId) {
     delete notesCache[ticketId];
     await loadNotes(ticketId);
     showToast('✅ Nota guardada');
+
+    // Notificar a admins/supervisores por WA + email
+    try {
+      const t = allTickets.find(x => x.id === ticketId);
+      const num = t?.ticket_number || ticketId;
+      const brand = t?.brand || '';
+      const model = t?.model || '';
+      const techName = session.full_name || 'Técnico';
+
+      const { data: admins } = await sb.from('sp_profiles')
+        .select('phone,email,full_name')
+        .in('role', ['admin', 'supervisor']);
+
+      for (const admin of admins || []) {
+        if (admin.phone) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: admin.phone,
+                message: `📝 *Nota técnica — Ticket #${num}*\n\n👨‍🔧 ${techName} agregó una nota:\n\n"${content}"\n\n🖥️ Equipo: ${brand} ${model}`
+              })
+            });
+          } catch(_) {}
+        }
+        if (admin.email) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'tech_note',
+                adminEmail: admin.email,
+                adminName: admin.full_name || 'Admin',
+                techName,
+                ticketNumber: num,
+                deviceBrand: brand,
+                deviceModel: model,
+                noteContent: content
+              })
+            });
+          } catch(_) {}
+        }
+      }
+    } catch(_) {}
+
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
 
