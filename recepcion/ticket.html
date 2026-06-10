@@ -1514,40 +1514,42 @@ async function sendMessage() {
     });
     if (error) throw error;
 
-    // Notificar al cliente por WhatsApp + Email
+    // Notificar al cliente por WhatsApp + Email (errores de notificación no bloquean el guardado)
     const cu  = ticketData?.sp_customers;
     const eq  = ticketData?.sp_equipment;
     const num = ticketData?.ticket_number || ticketId;
     const portalLink = 'https://soporte.focusstore.net/portal.html?token=' + encodeURIComponent(ticketData?.access_token || '');
 
     if (cu) {
-      // WhatsApp — parámetro correcto: "message"
       if (cu.phone) {
-        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to:      cu.phone,
-            message: `💬 *Mensaje de Focus Store — Ticket #${num}*\n\nHola ${cu.full_name},\n\n"${msg}"\n\n📋 Ver tu ticket:\n${portalLink}`
-          })
-        });
+        try {
+          await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to:      cu.phone,
+              message: `💬 *Mensaje de Focus Store — Ticket #${num}*\n\nHola ${cu.full_name},\n\n"${msg}"\n\n📋 Ver tu ticket:\n${portalLink}`
+            })
+          });
+        } catch(_) {}
       }
-      // Email — tipo staff_message
       if (cu.email) {
-        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type:         'staff_message',
-            clientName:   cu.full_name,
-            clientEmail:  cu.email,
-            ticketNumber: num,
-            deviceBrand:  eq?.brand || '',
-            deviceModel:  eq?.model || '',
-            staffMessage: msg,
-            portalToken:  ticketData?.access_token || ''
-          })
-        });
+        try {
+          await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type:         'staff_message',
+              clientName:   cu.full_name,
+              clientEmail:  cu.email,
+              ticketNumber: num,
+              deviceBrand:  eq?.brand || '',
+              deviceModel:  eq?.model || '',
+              staffMessage: msg,
+              portalToken:  ticketData?.access_token || ''
+            })
+          });
+        } catch(_) {}
       }
     }
 
@@ -1555,7 +1557,7 @@ async function sendMessage() {
     showToast('✅ Mensaje enviado' + (cu?.phone || cu?.email ? ' y cliente notificado' : ''));
     setTimeout(() => location.reload(), 1000);
   } catch (ex) {
-    showToast('⚠️ Error: ' + ex.message);
+    showToast('⚠️ Error al guardar: ' + ex.message);
   }
 }
 
