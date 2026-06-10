@@ -572,8 +572,8 @@
               <option value="equipo_recibido">📬 Equipo recibido</option>
               <option value="en_diagnostico">🔍 En diagnóstico</option>
               <option value="esperando_aprobacion">⚡ Esperando aprobación</option>
-              <option value="aprobado_reparacion">✅ Reparación aprobada</option>
               <option value="pendiente_pago">💳 Pago pendiente</option>
+              <option value="aprobado_reparacion">✅ Reparación aprobada</option>
               <option value="esperando_repuesto">📦 Esperando repuesto</option>
               <option value="en_reparacion">🔧 En reparación</option>
               <option value="en_pruebas">🧪 En pruebas</option>
@@ -760,8 +760,8 @@ const STATUS_MAP = {
   equipo_recibido:      { label: '📬 Equipo recibido',      pill: 'pill-verde' },
   en_diagnostico:       { label: '🔍 En diagnóstico',       pill: 'pill-azul' },
   esperando_aprobacion: { label: '⚡ Esperando aprobación', pill: 'pill-dorado' },
-  aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde' },
   pendiente_pago:       { label: '💳 Pago pendiente',       pill: 'pill-naranja' },
+  aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde' },
   esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja' },
   en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul' },
   en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul' },
@@ -2480,9 +2480,9 @@ const NEXT_STEPS = {
   en_diagnostico:       { text: 'Esperando que el técnico envíe su cotización interna.',              btn: '👁 Ver cotización técnico',       color: '#8892a4', action: 'ver_cotizacion' },
   esperando_aprobacion: { text: 'El técnico envió su cotización. Revísala para aprobar o rechazar.',  btn: '✅ Revisar cotización',          color: '#f5c842', action: 'ver_cotizacion' },
   esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: true },
+  pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago' },
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
-  pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago' },
   esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
   en_reparacion:        { text: 'El equipo está en reparación. Actualiza cuando termine.',            btn: '🧪 Reparación lista → Pruebas',  color: '#3d6aff', action: 'en_pruebas' },
   en_pruebas:           { text: 'El equipo está en pruebas. Cuando todo esté OK, márcalo listo.',     btn: '🎉 Pruebas OK → Listo',          color: '#a29bfe', action: 'listo' },
