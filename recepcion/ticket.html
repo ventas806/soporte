@@ -1235,6 +1235,7 @@ async function changeStatus(btn) {
     if (partsExpectedAt)   updatePayload.parts_expected_at   = partsExpectedAt;
     if (repairExpectedAt)  updatePayload.repair_expected_at  = repairExpectedAt;
     if (testingExpectedAt) updatePayload.testing_expected_at = testingExpectedAt;
+    if (newStatus === 'entregado') updatePayload.delivered_at = new Date().toISOString();
 
     const { error } = await sb.from('sp_tickets')
       .update(updatePayload)
@@ -1404,6 +1405,25 @@ async function changeStatus(btn) {
             body: JSON.stringify({ type: 'irreparable', clientName: cu.full_name,
               clientEmail: cu.email, ticketNumber: tNum,
               deviceBrand: brand, deviceModel: model, portalToken: accessToken })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+    }
+
+    // Agradecimiento al cliente cuando se marca entregado (mismo mensaje que el portal)
+    if (newStatus === 'entregado') {
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: cu.phone,
+              message: `🎊 *¡Gracias por confiar en Focus Store!*\n\nHola ${cu.full_name}, hemos registrado la entrega de tu *${brand} ${model}*.\n\n🎫 Ticket: #${tNum}\n📅 Entregado: ${new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })}\n\nSi tienes alguna duda o necesitas soporte adicional, no dudes en contactarnos.\n\n¡Hasta pronto! 😊\n*Focus Store Honduras*`
+            })
           });
         } catch (_) { /* no bloquea */ }
       }
@@ -2613,7 +2633,26 @@ async function doNextStep() {
   } else if (action === 'entregado') {
     if (!confirm('¿Confirmar que el cliente recogió su equipo?')) return;
     const { error } = await sb.from('sp_tickets').update({ status: 'entregado', delivered_at: new Date().toISOString() }).eq('id', ticketId);
-    if (!error) { showToast('✔ Ticket marcado como entregado'); setTimeout(() => location.reload(), 800); }
+    if (!error) {
+      // Agradecimiento al cliente (mismo mensaje que el portal)
+      const cu    = ticketData?.sp_customers;
+      const brand = ticketData?.sp_equipment?.brand || '';
+      const model = ticketData?.sp_equipment?.model || '';
+      const tNum  = ticketData?.ticket_number || '';
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: cu.phone,
+              message: `🎊 *¡Gracias por confiar en Focus Store!*\n\nHola ${cu.full_name}, hemos registrado la entrega de tu *${brand} ${model}*.\n\n🎫 Ticket: #${tNum}\n📅 Entregado: ${new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })}\n\nSi tienes alguna duda o necesitas soporte adicional, no dudes en contactarnos.\n\n¡Hasta pronto! 😊\n*Focus Store Honduras*`
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      showToast('✔ Entregado — cliente recibió mensaje de gracias');
+      setTimeout(() => location.reload(), 800);
+    }
   }
 }
 
