@@ -547,7 +547,50 @@ async function changeStatus(ticketId, currentStatus) {
   try {
     const { error } = await sb.from('sp_tickets').update({ status: newStatus }).eq('id', ticketId);
     if (error) throw error;
-    showToast('✅ Estado actualizado');
+
+    // Notificar al cliente si el equipo quedó listo para entrega
+    // (el override manual saltaba esta notificación — el cliente nunca se enteraba)
+    let notified = false;
+    if (newStatus === 'listo_para_entrega') {
+      const t = allTickets.find(x => x.id === ticketId);
+      const { data: tkt } = await sb.from('sp_tickets')
+        .select('access_token, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+        .eq('id', ticketId).single();
+      const cu    = tkt?.sp_customers;
+      const token = tkt?.access_token;
+      const brand = t?.brand || '';
+      const model = t?.model || '';
+      const equip = `${brand} ${model}`.trim();
+
+      if (cu?.email && token) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'ready_for_pickup',
+              clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: t?.ticket_number || '', deviceBrand: brand, deviceModel: model,
+              portalToken: token
+            })
+          });
+          notified = true;
+        } catch(_) {}
+      }
+      if (cu?.phone) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: cu.phone,
+              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t?.ticket_number || ''}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
+            })
+          });
+          notified = true;
+        } catch(_) {}
+      }
+    }
+
+    showToast(notified ? '✅ Estado actualizado — cliente notificado' : '✅ Estado actualizado');
     setTimeout(() => loadTickets(), 800);
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
