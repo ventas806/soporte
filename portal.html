@@ -1103,6 +1103,22 @@ async function confirmarEntrega() {
       } catch (_) { /* no bloquea */ }
     }
 
+    // Email de agradecimiento al cliente
+    if (customerData?.email) {
+      try {
+        await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'delivered',
+            clientName: name, clientEmail: customerData.email,
+            ticketNumber: tNum,
+            deviceBrand: eq?.brand || '', deviceModel: eq?.model || '',
+            deliveredDate: new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
     // Reemplazar banner con mensaje de agradecimiento
     document.getElementById('confirmarEntregaArea').innerHTML = `
       <div style="text-align:center;padding:8px 0">

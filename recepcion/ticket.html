@@ -1427,6 +1427,19 @@ async function changeStatus(btn) {
           });
         } catch (_) { /* no bloquea */ }
       }
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'delivered',
+              clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              deliveredDate: new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
     }
 
     showToast('✅ Estado actualizado');
@@ -2646,6 +2659,19 @@ async function doNextStep() {
             body: JSON.stringify({
               to: cu.phone,
               message: `🎊 *¡Gracias por confiar en Focus Store!*\n\nHola ${cu.full_name}, hemos registrado la entrega de tu *${brand} ${model}*.\n\n🎫 Ticket: #${tNum}\n📅 Entregado: ${new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })}\n\nSi tienes alguna duda o necesitas soporte adicional, no dudes en contactarnos.\n\n¡Hasta pronto! 😊\n*Focus Store Honduras*`
+            })
+          });
+        } catch (_) { /* no bloquea */ }
+      }
+      if (cu?.email) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'delivered',
+              clientName: cu.full_name, clientEmail: cu.email,
+              ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+              deliveredDate: new Date().toLocaleDateString('es-HN', { dateStyle: 'long' })
             })
           });
         } catch (_) { /* no bloquea */ }
