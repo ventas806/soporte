@@ -400,13 +400,14 @@ let session = null;
 let allItems = [];
 let currentCat = '';
 let editingId = null;
+let canEdit = false; // global: renderTable() lo usa para mostrar el botón editar
 
 window.addEventListener('DOMContentLoaded', async () => {
   session = getSession();
   if (!session) { location.href = '../login.html'; return; }
   // Técnico puede ver en modo lectura; otros roles no autorizados van a recepción
   const isTecnico  = session.role === 'tecnico';
-  const canEdit    = ['admin','supervisor'].includes(session.role);
+  canEdit = ['admin','supervisor'].includes(session.role);
   if (!canEdit && !isTecnico) {
     location.href = '../recepcion/index.html'; return;
   }
