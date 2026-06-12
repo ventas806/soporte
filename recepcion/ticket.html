@@ -2224,12 +2224,47 @@ async function confirmPaymentReceived(btn) {
 }
 
 async function skipPayment() {
-  if (!confirm('¿Continuar sin cobrar anticipo?\n\nEl ticket pasará a "Reparación aprobada".')) return;
+  if (!confirm('¿Continuar sin cobrar anticipo?\n\nEl ticket pasará a "Reparación aprobada" y el técnico será notificado para iniciar.')) return;
   const { error } = await sb.from('sp_tickets').update({
     status: 'aprobado_reparacion', status_changed_at: new Date().toISOString()
   }).eq('id', ticketId);
-  if (!error) { showToast('✅ Sin cobro — listo para reparación'); setTimeout(() => location.reload(), 700); }
-  else showToast('⚠️ Error: ' + error.message);
+  if (error) { showToast('⚠️ Error: ' + error.message); return; }
+
+  // Notificar al técnico (igual que al confirmar pago)
+  const techId = ticketData?.assigned_to;
+  if (techId && techProfiles[techId]) {
+    const tech  = techProfiles[techId];
+    const brand = ticketData.sp_equipment?.brand || '';
+    const model = ticketData.sp_equipment?.model || '';
+    const tNum  = ticketData.ticket_number;
+    const repDeadline = ticketData?.repair_expected_at;
+    const daysLeft = repDeadline
+      ? Math.ceil((new Date(repDeadline+'T12:00:00').getTime()-Date.now())/86400000) : 0;
+    const deadlineStr = repDeadline
+      ? new Date(repDeadline+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    const entregaLine = daysLeft > 0 ? `📅 Fecha límite de entrega: *${deadlineStr}* (${daysLeft} día(s))` : '';
+    if (tech.phone) {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: tech.phone,
+            message: `🔧 *Focus Store — Reparación Aprobada*\n\nHola ${tech.full_name}, el Ticket *#${tNum}* fue aprobado (sin anticipo). Puedes iniciar la reparación.\n\n💻 Equipo: ${brand} ${model}\n\n⚡ Tienes *24 horas* para iniciar\n${entregaLine}\n\n🔗 https://soporte.focusstore.net/tecnico/index.html` })
+        });
+      } catch(_) {}
+    }
+    if (tech.email) {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/notify-tech`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ techEmail: tech.email, techName: tech.full_name,
+            ticketNumber: tNum, deviceBrand: brand, deviceModel: model,
+            reportedFault: '✅ Reparación aprobada sin anticipo. Tienes 24h para iniciar la reparación.' })
+        });
+      } catch(_) {}
+    }
+  }
+  showToast('✅ Sin cobro — técnico notificado');
+  setTimeout(() => location.reload(), 800);
 }
 
 /* ── Reject modal ────────────────────────────────────────────── */
@@ -2512,8 +2547,8 @@ const NEXT_STEPS = {
   equipo_recibido:      { text: 'Asigna un técnico para iniciar el diagnóstico del equipo.',          btn: '🔍 Asignar técnico',             color: '#3d6aff', action: 'asignar' },
   en_diagnostico:       { text: 'Esperando que el técnico envíe su cotización interna.',              btn: '👁 Ver cotización técnico',       color: '#8892a4', action: 'ver_cotizacion' },
   esperando_aprobacion: { text: 'El técnico envió su cotización. Revísala para aprobar o rechazar.',  btn: '✅ Revisar cotización',          color: '#f5c842', action: 'ver_cotizacion' },
-  esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: true },
-  pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago' },
+  esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: { label: '⚡ Aprobar directo (sin cliente)', fn: 'approveDirectly()' } },
+  pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago, o continúa sin cobro.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago', btn2: { label: '✅ Continuar sin cobro', fn: 'skipPayment()' } },
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
   esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
@@ -2545,9 +2580,17 @@ function renderNextStep(status) {
   btn.style.background = ns.color;
   btn.style.color      = ['#f5c842','#2ed573','#ff9f43','#a29bfe'].includes(ns.color) ? '#1a1f2e' : '#fff';
 
-  // Mostrar u ocultar botón secundario "Aprobar directo"
+  // Botón secundario configurable por estado (label + función)
   const btn2 = document.getElementById('nextStepBtn2');
-  if (btn2) btn2.style.display = ns.btn2 ? 'inline-block' : 'none';
+  if (btn2) {
+    if (ns.btn2) {
+      btn2.textContent = ns.btn2.label;
+      btn2.setAttribute('onclick', ns.btn2.fn);
+      btn2.style.display = 'inline-block';
+    } else {
+      btn2.style.display = 'none';
+    }
+  }
 
   banner.style.display = 'flex';
 
