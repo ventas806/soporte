@@ -540,6 +540,22 @@ function renderNotes(ticketId, notes) {
 }
 
 /* ── Actions ────────────────────────────────────────────────── */
+/* ── Saldo pendiente del cliente (total cotizado − pagado) ────── */
+async function getSaldoLine(ticketId, paid) {
+  try {
+    const { data: q } = await sb.from('sp_repair_quotes')
+      .select('total,status')
+      .eq('ticket_id', ticketId)
+      .eq('quote_type', 'cliente')
+      .in('status', ['enviada', 'aprobada'])
+      .limit(1);
+    const total = q?.[0] ? parseFloat(q[0].total || 0) : 0;
+    const saldo = Math.max(0, total - parseFloat(paid || 0));
+    if (saldo > 0) return `\n💰 Saldo pendiente: *L. ${saldo.toLocaleString('es-HN',{minimumFractionDigits:2})}* — se cancela al recoger el equipo.\n`;
+  } catch(_) {}
+  return '';
+}
+
 async function changeStatus(ticketId, currentStatus) {
   const newStatus = document.getElementById(`st-${ticketId}`).value;
   if (!newStatus || newStatus === currentStatus) { showToast('⚠️ Seleccione un estado diferente.'); return; }
@@ -554,13 +570,14 @@ async function changeStatus(ticketId, currentStatus) {
     if (newStatus === 'listo_para_entrega') {
       const t = allTickets.find(x => x.id === ticketId);
       const { data: tkt } = await sb.from('sp_tickets')
-        .select('access_token, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+        .select('access_token, paid_amount, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
         .eq('id', ticketId).single();
       const cu    = tkt?.sp_customers;
       const token = tkt?.access_token;
       const brand = t?.brand || '';
       const model = t?.model || '';
       const equip = `${brand} ${model}`.trim();
+      const saldoLine = await getSaldoLine(ticketId, tkt?.paid_amount);
 
       if (cu?.email && token) {
         try {
@@ -582,7 +599,7 @@ async function changeStatus(ticketId, currentStatus) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               to: cu.phone,
-              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t?.ticket_number || ''}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
+              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t?.ticket_number || ''}\n${saldoLine}\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
             })
           });
           notified = true;
@@ -1070,12 +1087,13 @@ async function confirmActModal() {
 
     // Fetch customer + token for notifications (sin mostrar datos al tech)
     const { data: tkt } = await sb.from('sp_tickets')
-      .select('access_token, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+      .select('access_token, paid_amount, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
       .eq('id', ticketId).single();
     const cu    = tkt?.sp_customers;
     const token = tkt?.access_token;
     const brand = t.brand || '';
     const model = t.model || '';
+    const saldoLine = action === 'ready' ? await getSaldoLine(ticketId, tkt?.paid_amount) : '';
 
     // Email al cliente
     if (cu?.email && token) {
@@ -1102,7 +1120,7 @@ async function confirmActModal() {
       const equip = `${brand} ${model}`.trim();
       if (action === 'repair')  waMsg = `🔧 *Focus Store Soporte*\n\n¡Buenas noticias, ${name}! Tu equipo *${equip}* ya está en reparación.\n\n🎫 Ticket: #${t.ticket_number}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando esté listo. 🙏`;
       if (action === 'testing') waMsg = `🧪 *Focus Store Soporte*\n\n¡Casi listo, ${name}! Tu *${equip}* está en fase de pruebas.\n\n🎫 Ticket: #${t.ticket_number}\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*\n\nTe avisamos cuando puedas venir a recogerlo. 🙏`;
-      if (action === 'ready')   waMsg = `✅ *¡Tu equipo está listo!*\n\nHola ${name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t.ticket_number}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`;
+      if (action === 'ready')   waMsg = `✅ *¡Tu equipo está listo!*\n\nHola ${name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t.ticket_number}\n${saldoLine}\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`;
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },

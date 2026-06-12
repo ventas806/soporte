@@ -638,6 +638,9 @@
       <!-- ── Card de pago pendiente ────────────────────────── -->
       <div class="card" id="paymentCard" style="display:none;padding:16px"></div>
 
+      <!-- Saldo del cliente (total cotizado vs pagado) -->
+      <div class="card" id="balanceCard" style="display:none;padding:16px"></div>
+
       <!-- ── Fecha límite de diagnóstico ──────────────────── -->
       <div class="card" id="diagnosisDeadlineCard" style="display:none;padding:16px"></div>
 
@@ -1235,7 +1238,17 @@ async function changeStatus(btn) {
     if (partsExpectedAt)   updatePayload.parts_expected_at   = partsExpectedAt;
     if (repairExpectedAt)  updatePayload.repair_expected_at  = repairExpectedAt;
     if (testingExpectedAt) updatePayload.testing_expected_at = testingExpectedAt;
-    if (newStatus === 'entregado') updatePayload.delivered_at = new Date().toISOString();
+    if (newStatus === 'entregado') {
+      updatePayload.delivered_at = new Date().toISOString();
+      // Verificar saldo pendiente antes de entregar
+      const bal = getClientBalance();
+      if (bal.saldo > 0) {
+        const fmtS = 'L. ' + bal.saldo.toLocaleString('es-HN',{minimumFractionDigits:2});
+        const saldoCobrado = confirm(`💰 Saldo pendiente: ${fmtS}\n\n¿El cliente canceló el saldo al recoger?\n\nAceptar = saldo cobrado · Cancelar = entregar sin cobrar`);
+        if (saldoCobrado) updatePayload.paid_amount = bal.total;
+        else if (!confirm(`¿Entregar de todas formas SIN cobrar el saldo de ${fmtS}?`)) { restore?.(); return; }
+      }
+    }
 
     const { error } = await sb.from('sp_tickets')
       .update(updatePayload)
@@ -1275,13 +1288,17 @@ async function changeStatus(btn) {
         } catch (_) { /* no bloquea */ }
       }
       if (cu?.phone) {
+        const { saldo } = getClientBalance();
+        const saldoLine = saldo > 0
+          ? `\n💰 Saldo pendiente: *L. ${saldo.toLocaleString('es-HN',{minimumFractionDigits:2})}* — se cancela al recoger el equipo.\n`
+          : '';
         try {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               to: cu.phone,
-              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${brand} ${model}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${tNum}\n\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
+              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${brand} ${model}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${tNum}\n${saldoLine}\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
             })
           });
         } catch (_) { /* no bloquea */ }
@@ -1652,6 +1669,7 @@ async function loadQuotes() {
 
   renderInternalQuote();
   renderClientQuote();
+  if (ticketData) renderBalanceCard(ticketData);
 
   // Re-renderizar banner con info actualizada de cotizaciones
   if (ticketData) renderNextStep(ticketData.status);
@@ -2118,6 +2136,65 @@ function renderPaymentCard(t) {
     ${adminControls}`;
 }
 
+/* ── Saldo del cliente (total cotizado vs pagado) ─────────────── */
+function getClientBalance() {
+  const total = quoteClient && ['enviada','aprobada'].includes(quoteClient.status)
+    ? parseFloat(quoteClient.total || 0) : 0;
+  const paid  = parseFloat(ticketData?.paid_amount || 0);
+  return { total, paid, saldo: Math.max(0, total - paid) };
+}
+
+const BALANCE_STATUSES = ['aprobado_reparacion','esperando_repuesto','en_reparacion','en_pruebas','listo_para_entrega','entregado'];
+
+function renderBalanceCard(t) {
+  const el = document.getElementById('balanceCard');
+  if (!el || !t) return;
+  const { total, paid, saldo } = getClientBalance();
+  // Sin cotización al cliente (tickets del administrador) → no aplica saldo
+  if (!BALANCE_STATUSES.includes(t.status) || total <= 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  const fmt = n => 'L. ' + n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+  const isAdmin = ['admin','supervisor'].includes(session?.role);
+  const saldoRow = saldo > 0
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:8px;margin-top:8px">
+         <span style="font-size:12px;font-weight:700;color:var(--orange)">Saldo pendiente</span>
+         <span style="font-size:18px;font-weight:800;color:var(--orange)">${fmt(saldo)}</span>
+       </div>`
+    : `<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:8px;font-size:13px;font-weight:700;color:var(--green)">✅ Sin saldo pendiente</div>`;
+  const payBtn = (isAdmin && saldo > 0 && t.status !== 'entregado')
+    ? `<button onclick="registerBalancePayment()" style="width:100%;margin-top:12px;background:var(--green);color:#1a1f2e;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+         💰 Registrar pago del saldo recibido
+       </button>`
+    : '';
+
+  el.innerHTML = `
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gold);margin-bottom:10px">💰 Saldo del cliente</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--muted)">Total cotizado</span>
+      <span style="font-size:13px;font-weight:700">${fmt(total)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--muted)">Pagado</span>
+      <span style="font-size:13px;font-weight:700;color:var(--green)">${fmt(paid)}</span>
+    </div>
+    ${saldoRow}
+    ${payBtn}`;
+}
+
+async function registerBalancePayment() {
+  const { total, saldo } = getClientBalance();
+  if (saldo <= 0) return;
+  const fmt = n => 'L. ' + n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+  if (!confirm(`¿Confirmas que recibiste el saldo de ${fmt(saldo)}?\n\nEl ticket quedará pagado completo (${fmt(total)}).`)) return;
+  try {
+    const { error } = await sb.from('sp_tickets').update({ paid_amount: total }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Saldo registrado — pagado completo');
+    setTimeout(() => location.reload(), 800);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
 function onPayPctChange() {
   const sel = document.getElementById('payPctSelect');
   const inp = document.getElementById('payAmountInput');
@@ -2178,9 +2255,12 @@ async function confirmPaymentReceived(btn) {
   if (!confirm('¿Confirmas que recibiste el pago?\n\nEl técnico será notificado para iniciar la reparación.')) return;
   const restore = btnLoad(btn, 'Confirmando…');
   try {
+    // Acumular el pago confirmado para calcular el saldo al entregar
+    const newPaid = parseFloat(ticketData?.paid_amount || 0) + parseFloat(ticketData?.payment_amount || 0);
     const { error } = await sb.from('sp_tickets').update({
       status: 'aprobado_reparacion',
-      status_changed_at: new Date().toISOString()
+      status_changed_at: new Date().toISOString(),
+      paid_amount: newPaid
     }).eq('id', ticketId);
     if (error) throw error;
 
@@ -2683,12 +2763,29 @@ async function doNextStep() {
     const { error } = await sb.from('sp_tickets').update({ status: 'listo_para_entrega' }).eq('id', ticketId);
     if (!error) {
       const cu = ticketData?.sp_customers;
-      if (cu?.phone) { try { await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ to: cu.phone, message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu equipo ya puede ser recogido en nuestra tienda.\n\n📍 *Focus Store Honduras* 😊` }) }); } catch(_){} }
+      if (cu?.phone) {
+        const { saldo } = getClientBalance();
+        const saldoLine = saldo > 0
+          ? `\n💰 Saldo pendiente: *L. ${saldo.toLocaleString('es-HN',{minimumFractionDigits:2})}* — se cancela al recoger el equipo.\n`
+          : '';
+        try { await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ to: cu.phone, message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu equipo ya puede ser recogido en nuestra tienda.\n${saldoLine}\n📍 *Focus Store Honduras* 😊` }) }); } catch(_){}
+      }
       showToast('🎉 Listo — cliente notificado'); setTimeout(() => location.reload(), 800);
     }
   } else if (action === 'entregado') {
-    if (!confirm('¿Confirmar que el cliente recogió su equipo?')) return;
-    const { error } = await sb.from('sp_tickets').update({ status: 'entregado', delivered_at: new Date().toISOString() }).eq('id', ticketId);
+    // Verificar saldo pendiente antes de entregar
+    const bal = getClientBalance();
+    let saldoCobrado = false;
+    if (bal.saldo > 0) {
+      const fmtS = 'L. ' + bal.saldo.toLocaleString('es-HN',{minimumFractionDigits:2});
+      saldoCobrado = confirm(`💰 Saldo pendiente: ${fmtS}\n\n¿El cliente canceló el saldo al recoger?\n\nAceptar = saldo cobrado · Cancelar = entregar sin cobrar`);
+      if (!saldoCobrado && !confirm(`¿Entregar de todas formas SIN cobrar el saldo de ${fmtS}?`)) return;
+    } else {
+      if (!confirm('¿Confirmar que el cliente recogió su equipo?')) return;
+    }
+    const updEntrega = { status: 'entregado', delivered_at: new Date().toISOString() };
+    if (saldoCobrado) updEntrega.paid_amount = bal.total;
+    const { error } = await sb.from('sp_tickets').update(updEntrega).eq('id', ticketId);
     if (!error) {
       // Agradecimiento al cliente (mismo mensaje que el portal)
       const cu    = ticketData?.sp_customers;
