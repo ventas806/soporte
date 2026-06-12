@@ -291,7 +291,8 @@
 
   <div class="field">
     <label class="lbl">Accesorios incluidos</label>
-    <div class="acc-grid">
+    <div class="acc-grid" id="accGrid">
+      <!-- Cargado dinámicamente desde sp_config_accessories; respaldo si falla la conexión -->
       <div class="ck"><input type="checkbox" id="a1" value="Cargador/Adaptador"><label for="a1"><span class="ckb"></span>Cargador</label></div>
       <div class="ck"><input type="checkbox" id="a2" value="Batería"><label for="a2"><span class="ckb"></span>Batería</label></div>
       <div class="ck"><input type="checkbox" id="a3" value="Estuche/Bolso"><label for="a3"><span class="ckb"></span>Estuche/Bolso</label></div>
@@ -366,6 +367,25 @@ let session   = null;
 let existingCustomerId = null;
 let searchTimer = null;
 let techData  = {}; // id → { full_name, email, phone }
+
+/* ── Accesorios dinámicos (sp_config_accessories) ─────────────
+   Si la consulta falla, queda el HTML de respaldo hardcodeado. */
+(async function loadConfigAccessories() {
+  try {
+    const { data, error } = await sb.from('sp_config_accessories')
+      .select('label')
+      .eq('active', true)
+      .order('sort_order')
+      .order('created_at');
+    if (error || !data || !data.length) return; // respaldo hardcodeado
+    const escA = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    document.getElementById('accGrid').innerHTML = data.map((a, i) => `
+      <div class="ck">
+        <input type="checkbox" id="a${i + 1}" value="${escA(a.label)}">
+        <label for="a${i + 1}"><span class="ckb"></span>${escA(a.label)}</label>
+      </div>`).join('');
+  } catch (_) { /* respaldo hardcodeado */ }
+})();
 
 window.addEventListener('DOMContentLoaded', async () => {
   session = getSession();
@@ -496,7 +516,7 @@ async function submitTicket() {
 
     // 2. Accessories
     const accessories = [];
-    document.querySelectorAll('input[id^="a"][type="checkbox"]').forEach(c => { if (c.checked) accessories.push(c.value); });
+    document.querySelectorAll('#accGrid input[type="checkbox"]').forEach(c => { if (c.checked) accessories.push(c.value); });
 
     // 3. Equipment
     const { data: eq, error: eqE } = await sb.from('sp_equipment').insert({

@@ -570,7 +570,8 @@
 
     <div class="field">
       <label>Accesorios que incluye con el equipo</label>
-      <div class="acc-grid">
+      <div class="acc-grid" id="accGrid">
+        <!-- Cargado dinámicamente desde sp_config_accessories; respaldo si falla la conexión -->
         <div class="check-item">
           <input type="checkbox" id="acc-cargador" value="Cargador/Adaptador">
           <label for="acc-cargador"><span class="chk-box"></span>Cargador</label>
@@ -750,6 +751,27 @@
 const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ═══════════════════════════════════════════════════════════════
+   ACCESORIOS DINÁMICOS (sp_config_accessories)
+   Si la consulta falla, queda el HTML de respaldo hardcodeado.
+═══════════════════════════════════════════════════════════════ */
+(async function loadConfigAccessories() {
+  try {
+    const { data, error } = await sb.from('sp_config_accessories')
+      .select('label')
+      .eq('active', true)
+      .order('sort_order')
+      .order('created_at');
+    if (error || !data || !data.length) return; // respaldo hardcodeado
+    const escA = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    document.getElementById('accGrid').innerHTML = data.map((a, i) => `
+      <div class="check-item">
+        <input type="checkbox" id="acc-${i}" value="${escA(a.label)}">
+        <label for="acc-${i}"><span class="chk-box"></span>${escA(a.label)}</label>
+      </div>`).join('');
+  } catch (_) { /* respaldo hardcodeado */ }
+})();
 
 /* ═══════════════════════════════════════════════════════════════
    MODE DETECTION
@@ -937,7 +959,7 @@ async function submitForm() {
 
     // 2 ── Accessories ──────────────────────────────────────────
     const accessories = [];
-    document.querySelectorAll('input[id^="acc-"]').forEach(cb => {
+    document.querySelectorAll('#accGrid input[type="checkbox"]').forEach(cb => {
       if (cb.checked) accessories.push(cb.value);
     });
 
