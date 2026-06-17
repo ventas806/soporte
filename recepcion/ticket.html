@@ -2228,21 +2228,25 @@ async function sendPaymentNotification(btn) {
     const portal = `https://soporte.focusstore.net/portal.html?token=${encodeURIComponent(ticketData?.access_token || '')}`;
 
     if (cu?.phone) {
-      await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: cu.phone,
-          message: `💳 *Focus Store — Instrucciones de Pago*\n\nHola ${cu.full_name}, para iniciar la reparación de tu *${eq?.brand||''} ${eq?.model||''}* (Ticket *#${tNum}*) debes realizar un anticipo de:\n\n💵 *L. ${amtFmt}*\n\n${BANK_ACCOUNTS_WA}\n\n⚠️ La reparación iniciará una vez confirmemos tu pago.\n\n📋 Ver tu ticket:\n${portal}` })
-      });
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: cu.phone,
+            message: `💳 *Focus Store — Instrucciones de Pago*\n\nHola ${cu.full_name}, para iniciar la reparación de tu *${eq?.brand||''} ${eq?.model||''}* (Ticket *#${tNum}*) debes realizar un anticipo de:\n\n💵 *L. ${amtFmt}*\n\n${BANK_ACCOUNTS_WA}\n\n⚠️ La reparación iniciará una vez confirmemos tu pago.\n\n📋 Ver tu ticket:\n${portal}` })
+        });
+      } catch(_) {}
     }
     if (cu?.email) {
-      await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'payment_required', clientName: cu.full_name, clientEmail: cu.email,
-          ticketNumber: tNum, deviceBrand: eq?.brand||'', deviceModel: eq?.model||'',
-          paymentAmount: amtFmt, portalToken: ticketData?.access_token||''
-        })
-      });
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'payment_required', clientName: cu.full_name, clientEmail: cu.email,
+            ticketNumber: tNum, deviceBrand: eq?.brand||'', deviceModel: eq?.model||'',
+            paymentAmount: amtFmt, portalToken: ticketData?.access_token||''
+          })
+        });
+      } catch(_) {}
     }
     await sb.from('sp_tickets').update({ payment_notified_at: new Date().toISOString() }).eq('id', ticketId);
     showToast('📤 Instrucciones enviadas por WhatsApp y email');
