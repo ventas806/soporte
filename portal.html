@@ -697,14 +697,17 @@ async function loadTicket() {
       .eq('is_visible_to_client', true)
       .order('created_at', { ascending: true });
 
-    // Fetch client quote (pendiente = waiting client approval)
-    if (t.status === 'esperando_aprobacion') {
+    // Mostrar cotización al cliente en todos los estados post-diagnóstico
+    const QUOTE_STATUSES = new Set(['esperando_aprobacion','pendiente_pago','aprobado_reparacion',
+      'en_reparacion','esperando_repuesto','en_pruebas','listo_para_entrega','entregado']);
+    if (QUOTE_STATUSES.has(t.status)) {
+      const qStatus = t.status === 'esperando_aprobacion' ? 'pendiente' : 'aprobada';
       const { data: q } = await sb
         .from('sp_repair_quotes')
         .select(`*, sp_quote_items(*)`)
         .eq('ticket_id', t.id)
         .eq('quote_type', 'cliente')
-        .eq('status', 'pendiente')
+        .eq('status', qStatus)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
