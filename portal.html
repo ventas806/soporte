@@ -963,8 +963,46 @@ async function approveQuote() {
       .eq('id', ticketData.id);
     if (tErr) throw tErr;
 
-    // NO se notifica al técnico aquí — el técnico se notifica cuando
-    // el ADMIN aprueba su cotización interna (approveInternalQuote en ticket.html)
+    // Notificar al admin: cliente aprobó → ticket en pendiente_pago
+    const eq   = ticketData.sp_equipment;
+    const tNum = ticketData.ticket_number;
+    const name = customerData?.full_name || 'El cliente';
+    try {
+      const { data: admins } = await sb.from('sp_profiles')
+        .select('phone, email, full_name')
+        .in('role', ['admin', 'supervisor'])
+        .eq('is_active', true);
+
+      const waMsg = `✅ *Cliente aprobó cotización — Focus Store*\n\n*${name}* aprobó la cotización del Ticket *#${tNum}*.\n\n💻 Equipo: ${eq?.brand||''} ${eq?.model||''}\n💳 El ticket está en *Pago pendiente* — define el monto de anticipo.\n\nhttps://soporte.focusstore.net/recepcion/ticket.html?id=${ticketData.id}&_v=${Date.now()}`;
+
+      for (const admin of (admins || [])) {
+        if (admin.phone) {
+          try {
+            await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: admin.phone, message: waMsg })
+            });
+          } catch(_) {}
+        }
+        if (admin.email) {
+          try {
+            await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-ticket-email', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'client_approved',
+                adminEmail: admin.email,
+                adminName: admin.full_name || 'Admin',
+                clientName: name,
+                ticketNumber: tNum,
+                deviceBrand: eq?.brand || '',
+                deviceModel: eq?.model || '',
+                ticketId: ticketData.id
+              })
+            });
+          } catch(_) {}
+        }
+      }
+    } catch(_) { /* silencioso */ }
 
     showToast('✅ Cotización aprobada. ¡Gracias!');
     setTimeout(() => location.reload(), 2000);
