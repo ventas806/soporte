@@ -639,6 +639,18 @@ async function submitTicket() {
       } catch (_) { /* no bloquea */ }
     }
 
+    // 8. Notificar al admin sobre nuevo ticket ingresado
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: '50432876364',
+          message: `🔔 *Nuevo ticket ingresado — Focus Store*\n\n🎫 *#${ticketNum}*\n👤 Cliente: ${clientName}\n💻 Equipo: ${brand} ${model}\n🔍 Falla: ${v('fault').substring(0, 200)}\n\n📋 Ver ticket:\nhttps://soporte.focusstore.net/recepcion/ticket.html?id=${ticket.id}`
+        })
+      });
+    } catch (_) { /* no bloquea */ }
+
     // Redirect to ticket detail
     location.href = `ticket.html?id=${ticket.id}&new=1`;
 
