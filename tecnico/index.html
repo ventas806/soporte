@@ -656,15 +656,24 @@ async function addNote(ticketId) {
         .select('phone,email,full_name')
         .in('role', ['admin', 'supervisor']);
 
+      const ticketURL = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticketId}`;
+      const waMsg = `📝 *Nota técnica — Ticket #${num}*\n\n👨‍🔧 ${techName} agregó una nota:\n\n"${content}"\n\n🖥️ Equipo: ${brand} ${model}\n\n🔗 ${ticketURL}`;
+
+      // Siempre notificar al admin principal
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: '50432876364', message: waMsg })
+        });
+      } catch(_) {}
+
+      // Notificar a otros admins/supervisores en sp_profiles (si tienen teléfono distinto)
       for (const admin of admins || []) {
-        if (admin.phone) {
+        if (admin.phone && admin.phone.replace(/\D/g,'') !== '50432876364') {
           try {
             await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: admin.phone,
-                message: `📝 *Nota técnica — Ticket #${num}*\n\n👨‍🔧 ${techName} agregó una nota:\n\n"${content}"\n\n🖥️ Equipo: ${brand} ${model}`
-              })
+              body: JSON.stringify({ to: admin.phone, message: waMsg })
             });
           } catch(_) {}
         }
