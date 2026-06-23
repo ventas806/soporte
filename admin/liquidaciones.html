@@ -378,6 +378,40 @@ const KIND_LABEL = { anticipo:'Anticipo', liquidacion:'Liquidación', ajuste:'Aj
 let rows = [];
 let filter = 'pend';
 const openSet = new Set();
+const techMap = {}; // id → { full_name, phone }
+
+async function loadTechs() {
+  try {
+    const { data } = await sb.from('sp_profiles').select('id,full_name,phone');
+    (data || []).forEach(p => { techMap[p.id] = p; });
+  } catch (_) {}
+}
+
+/* Notificar al técnico por WhatsApp sobre un movimiento de pago */
+async function notifyTech(r, kind, amount, concept, newSaldo) {
+  const tech = techMap[r.assigned_to || YAIR_ID];
+  if (!tech?.phone) return;
+  const eq = r.sp_equipment || {};
+  const equip = ((eq.brand || '') + ' ' + (eq.model || '')).trim() || 'equipo';
+  const saldoLine = newSaldo <= 0.005
+    ? '✅ Saldo: *pagado completo*'
+    : `💼 Saldo pendiente: *${fmtL(newSaldo)}*`;
+  const conceptTxt = concept ? `\n📝 ${concept}` : '';
+  let msg;
+  if (kind === 'liquidacion') {
+    msg = `✅ *Focus Store — Pago registrado*\n\nHola ${tech.full_name}, se registró tu pago de *${fmtL(amount)}*.${conceptTxt}\n\n🎫 Ticket #${r.ticket_number} — ${equip}\n${saldoLine}`;
+  } else if (kind === 'anticipo') {
+    msg = `💰 *Focus Store — Anticipo registrado*\n\nHola ${tech.full_name}, se te registró un anticipo de *${fmtL(amount)}*.${conceptTxt}\n\n🎫 Ticket #${r.ticket_number} — ${equip}\n${saldoLine}`;
+  } else {
+    msg = `📝 *Focus Store — Ajuste registrado*\n\nHola ${tech.full_name}, ajuste de *${fmtL(amount)}* en el Ticket #${r.ticket_number} — ${equip}.${conceptTxt}\n${saldoLine}`;
+  }
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: tech.phone, message: msg })
+    });
+  } catch (_) {}
+}
 
 /* ── Carga ──────────────────────────────────────────────────── */
 async function loadData() {
@@ -565,6 +599,7 @@ async function addPayment(ticketId) {
     });
     if (error) throw error;
     showToast('✅ Movimiento registrado');
+    await notifyTech(r, kind, amount, concept, r.base - (r.paid + amount));
     await loadData();
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
@@ -585,6 +620,7 @@ async function liquidar(ticketId) {
     });
     if (error) throw error;
     showToast('✅ Ticket liquidado');
+    await notifyTech(r, 'liquidacion', r.saldo, 'Liquidación final', 0);
     await loadData();
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
@@ -620,6 +656,7 @@ async function resetBase(ticketId) {
 }
 
 document.getElementById('techPill').textContent = 'Técnico: Yair Valladares';
+loadTechs();
 loadData();
 </script>
 </body>
