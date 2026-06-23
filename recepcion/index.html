@@ -747,12 +747,47 @@ function filterByStatus(status) {
   applyFilters();
 }
 
-function applyFilters() {
+const FINALIZED_STATUSES = ['entregado', 'cerrado', 'cancelado', 'abandonado'];
+const finalizedCache = {}; // status → array de tickets (cargados bajo demanda)
+
+async function loadFinalized(status) {
+  if (finalizedCache[status]) return finalizedCache[status];
+  const { data, error } = await sb
+    .from('sp_tickets')
+    .select(`
+      id, ticket_number, status, ticket_origin, created_at, status_changed_at,
+      reported_fault, assigned_to,
+      sp_customers!sp_tickets_customer_id_fkey (full_name, phone),
+      sp_equipment!sp_tickets_equipment_id_fkey (category, brand, model)
+    `)
+    .eq('status', status)
+    .order('status_changed_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  finalizedCache[status] = data || [];
+  return finalizedCache[status];
+}
+
+async function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const status = document.getElementById('statusFilter').value;
   const origin = document.getElementById('originFilter').value;
 
-  let filtered = allTickets;
+  // Los estados finalizados no vienen en allTickets → se cargan bajo demanda
+  let source = allTickets;
+  if (FINALIZED_STATUSES.includes(status)) {
+    try {
+      document.getElementById('ticketList').innerHTML =
+        '<div class="centered-msg"><div class="big">⏳</div><p>Cargando tickets…</p></div>';
+      source = await loadFinalized(status);
+    } catch (ex) {
+      document.getElementById('ticketList').innerHTML =
+        `<div class="centered-msg"><div class="big">⚠️</div><p>Error al cargar: ${ex.message}</p></div>`;
+      return;
+    }
+  }
+
+  let filtered = source;
 
   if (status) filtered = filtered.filter(t => t.status === status);
   if (origin) filtered = filtered.filter(t => t.ticket_origin === origin);
