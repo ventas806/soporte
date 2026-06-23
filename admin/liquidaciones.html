@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liquidaciones · Focus Store Soporte</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0a0c10;
+      --bg2:    #12161f;
+      --bg3:    #1a1f2e;
+      --border: #2a2f3f;
+      --text:   #e8eaf0;
+      --muted:  #8892a4;
+      --accent: #3d6aff;
+      --green:  #2ed573;
+      --red:    #ff4757;
+      --gold:   #f5c842;
+      --orange: #ff9f43;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 30;
+    }
+    .sidebar-brand {
+      padding: 18px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--accent), #6a3dff);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .brand-name { font-size: 14px; font-weight: 700; }
+    .brand-sub  { font-size: 11px; color: var(--muted); }
+
+    .nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section {
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      padding: 14px 8px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover  { background: var(--bg3); color: var(--text); }
+    .nav-item.active { background: rgba(245,200,66,.12); color: var(--gold); }
+    .nav-item .ni    { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .sidebar-user {
+      border-top: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-av {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--gold); flex-shrink: 0;
+    }
+    .user-info-sb { flex: 1; min-width: 0; }
+    .user-info-sb h4 { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-info-sb p  { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; padding: 4px;
+    }
+    .logout-btn:hover { color: var(--red); }
+
+    /* ── Main ─────────────────────────────────────────────── */
+    .main { flex: 1; margin-left: 220px; }
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .topbar h2 { font-size: 17px; }
+    .topbar .tech-pill {
+      font-size: 12px; color: var(--muted);
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+    }
+    .page-body { padding: 24px; max-width: 1040px; }
+
+    /* ── Stat cards ───────────────────────────────────────── */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+    .stat {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 18px;
+    }
+    .stat .lbl { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .stat .val { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+    .stat.saldo .val { color: var(--orange); }
+    .stat.paid  .val { color: var(--green); }
+    .stat.base  .val { color: var(--text); }
+
+    /* ── Tabs ─────────────────────────────────────────────── */
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--muted);
+      font-size: 13px; font-weight: 600; padding: 7px 16px; cursor: pointer;
+    }
+    .tab.active { background: rgba(61,106,255,.15); color: var(--accent); border-color: rgba(61,106,255,.4); }
+
+    /* ── Ticket rows ──────────────────────────────────────── */
+    .row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .row-head {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; cursor: pointer;
+    }
+    .row-head:hover { background: var(--bg3); }
+    .rh-tkt { font-weight: 700; font-size: 14px; color: var(--accent); white-space: nowrap; }
+    .rh-equip { flex: 1; min-width: 0; }
+    .rh-equip h4 { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rh-equip p  { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rh-amt { text-align: right; white-space: nowrap; }
+    .rh-amt .a-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+    .rh-amt .a-val { font-size: 15px; font-weight: 700; }
+    .rh-amt .a-val.saldo { color: var(--orange); }
+    .rh-amt .a-val.zero  { color: var(--green); }
+    .pill {
+      font-size: 10.5px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    }
+    .pill-pend { background: rgba(255,159,67,.14); color: var(--orange); }
+    .pill-liq  { background: rgba(46,213,115,.14); color: var(--green); }
+    .chev { color: var(--muted); font-size: 13px; transition: transform .2s; }
+    .row.open .chev { transform: rotate(90deg); }
+
+    /* ── Expanded detail ──────────────────────────────────── */
+    .detail { display: none; border-top: 1px solid var(--border); padding: 16px; background: var(--bg); }
+    .row.open .detail { display: block; }
+
+    .baseedit {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+    }
+    .baseedit > span { font-size: 13px; color: var(--muted); }
+    .baseedit input {
+      width: 130px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text); padding: 7px 10px; font-size: 14px; outline: none;
+    }
+    .baseedit input:focus { border-color: var(--accent); }
+
+    .mov {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 12px; border-radius: 8px;
+      background: var(--bg2); border: 1px solid var(--border); margin-bottom: 6px;
+    }
+    .mov .m-kind { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+    .k-anticipo   { background: rgba(245,200,66,.14); color: var(--gold); }
+    .k-liquidacion{ background: rgba(46,213,115,.14); color: var(--green); }
+    .k-ajuste     { background: rgba(136,146,164,.14); color: var(--muted); }
+    .mov .m-concept { flex: 1; font-size: 13px; min-width: 0; }
+    .mov .m-concept small { color: var(--muted); display: block; font-size: 11px; }
+    .mov .m-amt { font-weight: 700; font-size: 14px; white-space: nowrap; }
+    .mov .m-del {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--muted); width: 28px; height: 28px; cursor: pointer; flex-shrink: 0;
+    }
+    .mov .m-del:hover { color: var(--red); border-color: var(--red); }
+    .empty-mini { font-size: 12.5px; color: var(--muted); padding: 8px 2px; }
+
+    .addmov {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--border);
+    }
+    .addmov select, .addmov input {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); padding: 8px 10px; font-size: 13px; outline: none;
+    }
+    .addmov select:focus, .addmov input:focus { border-color: var(--accent); }
+    .addmov .c-concept { flex: 1; min-width: 140px; }
+    .addmov .c-amt  { width: 110px; }
+    .addmov .c-date { width: 150px; }
+
+    .btn {
+      border: none; border-radius: 8px; font-weight: 700; font-size: 13px;
+      padding: 8px 14px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-liq { background: var(--green); color: #08130b; }
+    .btn-liq:hover { filter: brightness(1.1); }
+    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+    .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 50px 0; }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13.5px;
+      opacity: 0;
+      transition: all .25s;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (max-width: 820px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ────────────────────────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📷</div>
+      <div>
+        <div class="brand-name">Focus Store</div>
+        <div class="brand-sub">Soporte Técnico</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item" href="../recepcion/index.html"><span class="ni">🎫</span> Tickets</a>
+      <a class="nav-item" href="../recepcion/nuevo-ticket.html"><span class="ni">➕</span> Nuevo ticket</a>
+
+      <div class="nav-section">Administración</div>
+      <a class="nav-item" href="index.html"><span class="ni">👥</span> Personal</a>
+      <a class="nav-item" href="precios.html"><span class="ni">💰</span> Catálogo de precios</a>
+      <a class="nav-item active" href="liquidaciones.html"><span class="ni">💵</span> Liquidaciones</a>
+      <a class="nav-item" href="configuracion.html"><span class="ni">⚙️</span> Configuración</a>
+
+      <div class="nav-section">Herramientas</div>
+      <a class="nav-item" href="../ingreso.html" target="_blank"><span class="ni">🌐</span> Ingreso público</a>
+      <a class="nav-item" href="../ingreso.html?mode=presencial" target="_blank"><span class="ni">📍</span> Ingreso presencial</a>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-av" id="navAvatar">?</div>
+      <div class="user-info-sb">
+        <h4 id="navName">—</h4>
+        <p id="navRole">—</p>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Cerrar sesión">⏻</button>
+    </div>
+  </nav>
+
+  <!-- ── Main content ──────────────────────────────────────────── -->
+  <div class="main">
+
+    <div class="topbar">
+      <h2>💵 Liquidaciones</h2>
+      <span class="tech-pill" id="techPill">Técnico: —</span>
+    </div>
+
+    <div class="page-body">
+
+      <div class="stats">
+        <div class="stat base">
+          <div class="lbl">🧾 Total trabajos (a pagar)</div>
+          <div class="val" id="stBase">L. 0.00</div>
+        </div>
+        <div class="stat paid">
+          <div class="lbl">✅ Pagado al técnico</div>
+          <div class="val" id="stPaid">L. 0.00</div>
+        </div>
+        <div class="stat saldo">
+          <div class="lbl">⏳ Saldo pendiente</div>
+          <div class="val" id="stSaldo">L. 0.00</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-f="pend" onclick="setFilter('pend')">Pendientes</button>
+        <button class="tab" data-f="liq" onclick="setFilter('liq')">Liquidados</button>
+        <button class="tab" data-f="all" onclick="setFilter('all')">Todos</button>
+      </div>
+
+      <div id="list"><div class="empty">Cargando…</div></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://uzhjnedhmbvgfqqssuov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6aGpuZWRobWJ2Z2ZxcXNzdW92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMjA1MTgsImV4cCI6MjA5MDg5NjUxOH0.w8oomn73rEZWqKv4RA56uCrBwv1z4VYnks7fyhafqz8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const YAIR_ID = 'ebd772e8-f152-4450-8797-2167fcc4394d'; // técnico por defecto si el ticket no tiene asignado
+const ROLE_LABELS = { admin:'Administrador', supervisor:'Supervisor', recepcion:'Recepción', tecnico:'Técnico' };
+
+/* ── Sesión ─────────────────────────────────────────────────── */
+let session = null;
+(function checkSession() {
+  try { session = JSON.parse(localStorage.getItem('sp_session') || 'null'); } catch(_) {}
+  if (!session) { location.href = '../login.html'; return; }
+  if (!['admin','supervisor'].includes(session.role)) {
+    alert('No tienes permiso para acceder a esta página.');
+    location.href = '../recepcion/index.html';
+    return;
+  }
+  document.getElementById('navAvatar').textContent = (session.full_name || '?').charAt(0).toUpperCase();
+  document.getElementById('navName').textContent   = session.full_name || '—';
+  document.getElementById('navRole').textContent   = ROLE_LABELS[session.role] || session.role;
+})();
+
+function logout() { localStorage.removeItem('sp_session'); location.href = '../login.html'; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const fmtL = n => 'L. ' + Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2 });
+const fmtD = iso => iso ? new Date(iso).toLocaleDateString('es-HN', { day:'2-digit', month:'short', year:'numeric' }) : '';
+const todayISO = () => new Date().toISOString().split('T')[0];
+
+const KIND_LABEL = { anticipo:'Anticipo', liquidacion:'Liquidación', ajuste:'Ajuste' };
+
+/* ── Estado ─────────────────────────────────────────────────── */
+let rows = [];
+let filter = 'pend';
+const openSet = new Set();
+
+/* ── Carga ──────────────────────────────────────────────────── */
+async function loadData() {
+  try {
+    // 1. Cotizaciones internas aprobadas → base a pagar a Yair por ticket (la más reciente)
+    const { data: quotes, error: qe } = await sb.from('sp_repair_quotes')
+      .select('ticket_id,total,created_at')
+      .eq('quote_type', 'interna').eq('status', 'aprobada')
+      .order('created_at', { ascending: false });
+    if (qe) throw qe;
+
+    const baseByTicket = {};
+    (quotes || []).forEach(q => { if (!(q.ticket_id in baseByTicket)) baseByTicket[q.ticket_id] = parseFloat(q.total || 0); });
+    const ids = Object.keys(baseByTicket);
+
+    if (!ids.length) {
+      rows = [];
+      render();
+      return;
+    }
+
+    // 2. Tickets de esos ids
+    const { data: tks, error: te } = await sb.from('sp_tickets')
+      .select(`id,ticket_number,status,assigned_to,delivered_at,status_changed_at,tech_payout_amount,
+               sp_equipment!sp_tickets_equipment_id_fkey(brand,model,category),
+               sp_customers!sp_tickets_customer_id_fkey(full_name)`)
+      .in('id', ids);
+    if (te) throw te;
+
+    // 3. Pagos al técnico
+    const { data: pays, error: pe } = await sb.from('sp_tech_payments')
+      .select('*').in('ticket_id', ids).order('paid_at', { ascending: true });
+    if (pe) throw pe;
+
+    rows = (tks || []).map(t => {
+      const quoteBase = baseByTicket[t.id] || 0;
+      const base  = t.tech_payout_amount != null ? parseFloat(t.tech_payout_amount) : quoteBase;
+      const movs  = (pays || []).filter(p => p.ticket_id === t.id);
+      const paid  = movs.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+      const saldo = base - paid;
+      return { ...t, quoteBase, base, movs, paid, saldo, liquidado: saldo <= 0.005, hasOverride: t.tech_payout_amount != null };
+    });
+
+    // Orden: pendientes (mayor saldo) primero, luego liquidados (más reciente)
+    rows.sort((a, b) => {
+      if (a.liquidado !== b.liquidado) return a.liquidado ? 1 : -1;
+      return b.saldo - a.saldo;
+    });
+
+    render();
+  } catch (ex) {
+    document.getElementById('list').innerHTML = `<div class="empty">⚠️ Error al cargar: ${esc(ex.message)}</div>`;
+  }
+}
+
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.f === f));
+  render();
+}
+
+/* ── Render ─────────────────────────────────────────────────── */
+function render() {
+  // Totales globales (sobre todos los trabajos)
+  const totBase  = rows.reduce((s, r) => s + r.base, 0);
+  const totPaid  = rows.reduce((s, r) => s + r.paid, 0);
+  const totSaldo = rows.reduce((s, r) => s + Math.max(r.saldo, 0), 0);
+  document.getElementById('stBase').textContent  = fmtL(totBase);
+  document.getElementById('stPaid').textContent  = fmtL(totPaid);
+  document.getElementById('stSaldo').textContent = fmtL(totSaldo);
+
+  const visible = rows.filter(r =>
+    filter === 'all' ? true : filter === 'liq' ? r.liquidado : !r.liquidado
+  );
+
+  const el = document.getElementById('list');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">Aún no hay trabajos con cotización interna aprobada.</div>';
+    return;
+  }
+  if (!visible.length) {
+    el.innerHTML = `<div class="empty">No hay tickets ${filter === 'liq' ? 'liquidados' : 'pendientes'}.</div>`;
+    return;
+  }
+
+  el.innerHTML = visible.map(rowHtml).join('');
+}
+
+function rowHtml(r) {
+  const eq = r.sp_equipment || {};
+  const cu = r.sp_customers || {};
+  const isOpen = openSet.has(r.id);
+  const saldoCls = r.liquidado ? 'zero' : 'saldo';
+
+  const movsHtml = r.movs.length
+    ? r.movs.map(m => `
+      <div class="mov">
+        <span class="m-kind k-${m.kind}">${KIND_LABEL[m.kind] || m.kind}</span>
+        <div class="m-concept">${esc(m.concept || '—')}<small>${fmtD(m.paid_at)}</small></div>
+        <span class="m-amt">${fmtL(m.amount)}</span>
+        <button class="m-del" title="Eliminar movimiento" onclick="deletePayment('${m.id}','${r.id}')">🗑️</button>
+      </div>`).join('')
+    : '<div class="empty-mini">Sin anticipos ni pagos registrados.</div>';
+
+  const resetBtn = r.hasOverride
+    ? `<button class="btn btn-ghost" onclick="resetBase('${r.id}')" title="Volver al total de la cotización interna">↺ Usar cotización (${fmtL(r.quoteBase)})</button>`
+    : '';
+
+  const liqBtn = r.saldo > 0.005
+    ? `<button class="btn btn-liq" onclick="liquidar('${r.id}')">✅ Liquidar saldo (${fmtL(r.saldo)})</button>`
+    : '';
+
+  return `
+  <div class="row ${isOpen ? 'open' : ''}" id="row-${r.id}">
+    <div class="row-head" onclick="toggleRow('${r.id}')">
+      <span class="rh-tkt">#${esc(r.ticket_number)}</span>
+      <div class="rh-equip">
+        <h4>${esc((eq.brand || '') + ' ' + (eq.model || '')).trim() || 'Equipo'}</h4>
+        <p>${esc(cu.full_name || '—')}</p>
+      </div>
+      <div class="rh-amt">
+        <div class="a-lbl">A pagar</div>
+        <div class="a-val">${fmtL(r.base)}</div>
+      </div>
+      <div class="rh-amt">
+        <div class="a-lbl">Pagado</div>
+        <div class="a-val" style="color:var(--green)">${fmtL(r.paid)}</div>
+      </div>
+      <div class="rh-amt">
+        <div class="a-lbl">Saldo</div>
+        <div class="a-val ${saldoCls}">${fmtL(Math.max(r.saldo, 0))}</div>
+      </div>
+      <span class="pill ${r.liquidado ? 'pill-liq' : 'pill-pend'}">${r.liquidado ? '✅ Liquidado' : 'Pendiente'}</span>
+      <span class="chev">▶</span>
+    </div>
+
+    <div class="detail">
+      <div class="baseedit">
+        <span>💵 Monto a pagar a Yair:</span>
+        <input type="number" min="0" step="0.01" id="b-${r.id}" value="${r.base}">
+        <button class="btn btn-primary" onclick="saveBase('${r.id}')">💾 Guardar</button>
+        ${resetBtn}
+        <span style="margin-left:auto;font-size:12px">Cotización interna: <strong>${fmtL(r.quoteBase)}</strong></span>
+      </div>
+
+      <div class="movs">${movsHtml}</div>
+
+      <div class="addmov">
+        <select id="k-${r.id}">
+          <option value="anticipo">Anticipo (compra repuesto)</option>
+          <option value="liquidacion">Liquidación / pago</option>
+          <option value="ajuste">Ajuste</option>
+        </select>
+        <input class="c-concept" id="c-${r.id}" placeholder="Concepto (ej: Compra de pantalla)" maxlength="120">
+        <input class="c-amt" id="a-${r.id}" type="number" min="0" step="0.01" placeholder="Monto L.">
+        <input class="c-date" id="d-${r.id}" type="date" value="${todayISO()}">
+        <button class="btn btn-primary" onclick="addPayment('${r.id}')">➕ Registrar</button>
+        ${liqBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleRow(id) {
+  if (openSet.has(id)) openSet.delete(id); else openSet.add(id);
+  document.getElementById(`row-${id}`)?.classList.toggle('open');
+}
+
+/* ── Acciones ───────────────────────────────────────────────── */
+async function addPayment(ticketId) {
+  const r = rows.find(x => x.id === ticketId);
+  if (!r) return;
+  const kind    = document.getElementById(`k-${ticketId}`)?.value || 'anticipo';
+  const concept = document.getElementById(`c-${ticketId}`)?.value?.trim() || null;
+  const amount  = parseFloat(document.getElementById(`a-${ticketId}`)?.value || '0');
+  const paidAt  = document.getElementById(`d-${ticketId}`)?.value || todayISO();
+  if (!amount || amount <= 0) { showToast('⚠️ Ingresa un monto válido.'); return; }
+  try {
+    const { error } = await sb.from('sp_tech_payments').insert({
+      ticket_id: ticketId,
+      tech_id:   r.assigned_to || YAIR_ID,
+      kind, concept, amount,
+      paid_at: new Date(paidAt + 'T12:00:00').toISOString(),
+      created_by: session.id
+    });
+    if (error) throw error;
+    showToast('✅ Movimiento registrado');
+    await loadData();
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function liquidar(ticketId) {
+  const r = rows.find(x => x.id === ticketId);
+  if (!r || r.saldo <= 0.005) return;
+  if (!confirm(`¿Registrar la liquidación final de ${fmtL(r.saldo)} a Yair?\n\nEsto deja el ticket #${r.ticket_number} como PAGADO COMPLETO.`)) return;
+  try {
+    const { error } = await sb.from('sp_tech_payments').insert({
+      ticket_id: ticketId,
+      tech_id:   r.assigned_to || YAIR_ID,
+      kind: 'liquidacion',
+      concept: 'Liquidación final',
+      amount: r.saldo,
+      paid_at: new Date().toISOString(),
+      created_by: session.id
+    });
+    if (error) throw error;
+    showToast('✅ Ticket liquidado');
+    await loadData();
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function deletePayment(payId, ticketId) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  try {
+    const { error } = await sb.from('sp_tech_payments').delete().eq('id', payId);
+    if (error) throw error;
+    showToast('🗑️ Movimiento eliminado');
+    await loadData();
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function saveBase(ticketId) {
+  const v = parseFloat(document.getElementById(`b-${ticketId}`)?.value || '0');
+  if (isNaN(v) || v < 0) { showToast('⚠️ Monto inválido.'); return; }
+  try {
+    const { error } = await sb.from('sp_tickets').update({ tech_payout_amount: v }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('💾 Monto a pagar actualizado');
+    await loadData();
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+async function resetBase(ticketId) {
+  try {
+    const { error } = await sb.from('sp_tickets').update({ tech_payout_amount: null }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('↺ Usando total de la cotización interna');
+    await loadData();
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+document.getElementById('techPill').textContent = 'Técnico: Yair Valladares';
+loadData();
+</script>
+</body>
+</html>
