@@ -156,6 +156,17 @@
     .rh-equip { flex: 1; min-width: 0; }
     .rh-equip h4 { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rh-equip p  { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tstatus {
+      display: inline-block; margin-top: 4px;
+      font-size: 10.5px; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .st-azul    { background: rgba(61,106,255,.14);  color: #6a8cff; }
+    .st-dorado  { background: rgba(245,200,66,.14);  color: var(--gold); }
+    .st-verde   { background: rgba(46,213,115,.14);  color: var(--green); }
+    .st-naranja { background: rgba(255,159,67,.14);  color: var(--orange); }
+    .st-rojo    { background: rgba(255,71,87,.14);   color: var(--red); }
+    .st-gris    { background: rgba(136,146,164,.14); color: var(--muted); }
     .rh-amt { text-align: right; white-space: nowrap; }
     .rh-amt .a-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
     .rh-amt .a-val { font-size: 15px; font-weight: 700; }
@@ -374,6 +385,25 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 
 const KIND_LABEL = { anticipo:'Anticipo', liquidacion:'Liquidación', ajuste:'Ajuste' };
 
+const STATUS_MAP = {
+  solicitud_recibida:  { label: '📝 Solicitud recibida', cls: 'st-azul' },
+  equipo_en_camino:    { label: '🚚 Equipo en camino',   cls: 'st-dorado' },
+  equipo_recibido:     { label: '📬 Equipo recibido',    cls: 'st-verde' },
+  en_diagnostico:      { label: '🔍 En diagnóstico',     cls: 'st-azul' },
+  esperando_aprobacion:{ label: '⚡ Esperando aprobación',cls: 'st-dorado' },
+  pendiente_pago:      { label: '💳 Pago pendiente',      cls: 'st-naranja' },
+  aprobado_reparacion: { label: '✅ Reparación aprobada', cls: 'st-verde' },
+  esperando_repuesto:  { label: '📦 Esperando repuesto',  cls: 'st-naranja' },
+  en_reparacion:       { label: '🔧 En reparación',       cls: 'st-azul' },
+  en_pruebas:          { label: '🧪 En pruebas',          cls: 'st-azul' },
+  listo_para_entrega:  { label: '🎉 Listo para entrega',  cls: 'st-verde' },
+  entregado:           { label: '✔ Entregado',           cls: 'st-gris' },
+  cerrado:             { label: '🔒 Cerrado',             cls: 'st-gris' },
+  cancelado:           { label: '✖ Cancelado',           cls: 'st-rojo' },
+  irreparable:         { label: '⛔ Irreparable',         cls: 'st-rojo' },
+  abandonado:          { label: '⊘ Abandonado',          cls: 'st-gris' }
+};
+
 /* ── Estado ─────────────────────────────────────────────────── */
 let rows = [];
 let filter = 'pend';
@@ -531,6 +561,7 @@ function rowHtml(r) {
       <div class="rh-equip">
         <h4>${esc((eq.brand || '') + ' ' + (eq.model || '')).trim() || 'Equipo'}</h4>
         <p>${esc(cu.full_name || '—')}</p>
+        ${(() => { const s = STATUS_MAP[r.status]; return s ? `<span class="tstatus ${s.cls}">${s.label}</span>` : `<span class="tstatus st-gris">${esc(r.status || '')}</span>`; })()}
       </div>
       <div class="rh-amt">
         <div class="a-lbl">A pagar</div>
