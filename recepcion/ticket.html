@@ -2303,7 +2303,46 @@ async function confirmPaymentReceived(btn) {
         } catch(_) {}
       }
     }
-    showToast('✅ Pago confirmado — técnico notificado');
+
+    // Notificar al CLIENTE que recibimos su pago y la reparación inicia
+    const cu     = ticketData?.sp_customers;
+    const brandC = ticketData?.sp_equipment?.brand || '';
+    const modelC = ticketData?.sp_equipment?.model || '';
+    const tNumC  = ticketData?.ticket_number;
+    const amtPaid = parseFloat(ticketData?.payment_amount || 0);
+    const amtPaidFmt = amtPaid.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+    const totalCli = (quoteClient && ['enviada','aprobada'].includes(quoteClient.status))
+      ? parseFloat(quoteClient.total || 0) : 0;
+    const saldoCli = Math.max(0, totalCli - newPaid);
+    const saldoFmt = saldoCli.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+    const portalCli = `https://soporte.focusstore.net/portal.html?token=${encodeURIComponent(ticketData?.access_token || '')}`;
+    if (cu?.phone) {
+      const saldoLine = saldoCli > 0
+        ? `\n💰 Saldo pendiente: *L. ${saldoFmt}* (se cancela al recoger el equipo)`
+        : '';
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: cu.phone,
+            message: `✅ *Focus Store — Pago recibido*\n\nHola ${cu.full_name}, confirmamos que recibimos tu pago de *L. ${amtPaidFmt}* del Ticket *#${tNumC}*.\n\n💻 Equipo: ${brandC} ${modelC}\n🔧 ¡Tu reparación va a iniciar!${saldoLine}\n\n📋 Ver tu ticket:\n${portalCli}` })
+        });
+      } catch(_) {}
+    }
+    if (cu?.email) {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'payment_received', clientName: cu.full_name, clientEmail: cu.email,
+            ticketNumber: tNumC, deviceBrand: brandC, deviceModel: modelC,
+            paymentAmount: amtPaidFmt, paymentSaldo: saldoCli > 0 ? saldoFmt : '',
+            portalToken: ticketData?.access_token || ''
+          })
+        });
+      } catch(_) {}
+    }
+
+    showToast('✅ Pago confirmado — cliente y técnico notificados');
     setTimeout(() => location.reload(), 800);
   } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
   finally { restore(); }
