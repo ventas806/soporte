@@ -619,6 +619,7 @@ const STATUS_MAP = {
   aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde',  emoji: '✅' },
   pendiente_pago:       { label: '💳 Pago pendiente',        pill: 'pill-naranja',emoji: '💳' },
   esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja',emoji: '📦' },
+  standby:              { label: '⏸️ En espera de repuesto', pill: 'pill-gris',  emoji: '⏸️' },
   en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul',   emoji: '🔧' },
   en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul',   emoji: '🧪' },
   listo_para_entrega:   { label: '🎉 Listo para retiro',    pill: 'pill-verde',  emoji: '🎉' },
@@ -699,7 +700,7 @@ async function loadTicket() {
 
     // Mostrar cotización al cliente en todos los estados post-diagnóstico
     const QUOTE_STATUSES = new Set(['esperando_aprobacion','pendiente_pago','aprobado_reparacion',
-      'en_reparacion','esperando_repuesto','en_pruebas','listo_para_entrega','entregado']);
+      'en_reparacion','esperando_repuesto','standby','en_pruebas','listo_para_entrega','entregado']);
     if (QUOTE_STATUSES.has(t.status)) {
       const qStatus = t.status === 'esperando_aprobacion' ? 'pendiente' : 'aprobada';
       const { data: q } = await sb

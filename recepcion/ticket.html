@@ -575,6 +575,7 @@
               <option value="pendiente_pago">💳 Pago pendiente</option>
               <option value="aprobado_reparacion">✅ Reparación aprobada</option>
               <option value="esperando_repuesto">📦 Esperando repuesto</option>
+              <option value="standby">⏸️ Standby (repuesto no disponible)</option>
               <option value="en_reparacion">🔧 En reparación</option>
               <option value="en_pruebas">🧪 En pruebas</option>
               <option value="listo_para_entrega">🎉 Listo para entrega</option>
@@ -766,6 +767,7 @@ const STATUS_MAP = {
   pendiente_pago:       { label: '💳 Pago pendiente',       pill: 'pill-naranja' },
   aprobado_reparacion:  { label: '✅ Reparación aprobada',  pill: 'pill-verde' },
   esperando_repuesto:   { label: '📦 Esperando repuesto',   pill: 'pill-naranja' },
+  standby:              { label: '⏸️ Standby (sin repuesto)', pill: 'pill-gris' },
   en_reparacion:        { label: '🔧 En reparación',        pill: 'pill-azul' },
   en_pruebas:           { label: '🧪 En pruebas',           pill: 'pill-azul' },
   listo_para_entrega:   { label: '🎉 Listo para entrega',   pill: 'pill-verde' },
@@ -2144,7 +2146,7 @@ function getClientBalance() {
   return { total, paid, saldo: Math.max(0, total - paid) };
 }
 
-const BALANCE_STATUSES = ['aprobado_reparacion','esperando_repuesto','en_reparacion','en_pruebas','listo_para_entrega','entregado'];
+const BALANCE_STATUSES = ['aprobado_reparacion','esperando_repuesto','standby','en_reparacion','en_pruebas','listo_para_entrega','entregado'];
 
 function renderBalanceCard(t) {
   const el = document.getElementById('balanceCard');
@@ -2636,6 +2638,7 @@ const NEXT_STEPS = {
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
   esperando_repuesto:   { text: 'Esperando llegada del repuesto. Actualiza cuando llegue.',           btn: '🔧 Repuesto llegó → Reparación', color: '#ff9f43', action: 'en_reparacion' },
+  standby:              { text: 'En standby: el repuesto no está disponible o agotado. El ticket queda en pausa sin alertas. Reactívalo cuando consigas el repuesto.', btn: '🔧 Repuesto disponible → Reparación', color: '#8892a4', action: 'en_reparacion' },
   en_reparacion:        { text: 'El equipo está en reparación. Actualiza cuando termine.',            btn: '🧪 Reparación lista → Pruebas',  color: '#3d6aff', action: 'en_pruebas' },
   en_pruebas:           { text: 'El equipo está en pruebas. Cuando todo esté OK, márcalo listo.',     btn: '🎉 Pruebas OK → Listo',          color: '#a29bfe', action: 'listo' },
   listo_para_entrega:   { text: 'El equipo está listo. El cliente ya fue notificado.',                btn: '✔ Marcar como entregado',       color: '#2ed573', action: 'entregado' },
