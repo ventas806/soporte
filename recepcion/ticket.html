@@ -1832,13 +1832,16 @@ function buildClientQuoteForm(prefill) {
         </div>`;
       })()}
       <div class="field" style="margin-bottom:10px">
-        <div class="field-label">Cargo de diagnóstico</div>
+        <div class="field-label">Cargo de diagnóstico (depósito del cliente)</div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center">
-          <input type="number" id="diagFee" placeholder="0.00" min="0" step="0.01" oninput="recalcBuild()">
+          <input type="number" id="diagFee" placeholder="0.00" min="0" step="0.01" value="${parseFloat(ticketData?.diagnosis_fee) > 0 ? parseFloat(ticketData.diagnosis_fee) : ''}" oninput="recalcBuild()">
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap">
-            <input type="checkbox" id="diagCredit" onchange="recalcBuild()"> Acreditar si aprueban
+            <input type="checkbox" id="diagCredit" onchange="recalcBuild()" ${parseFloat(ticketData?.diagnosis_fee) > 0 ? 'checked' : ''}> Acreditar si aprueban
           </label>
         </div>
+        ${parseFloat(ticketData?.diagnosis_fee) > 0
+          ? `<div style="font-size:11px;color:var(--muted);margin-top:5px">💡 Depósito registrado al ingresar el ticket. Si el cliente aprueba, se le descuenta del total; si rechaza, queda como cargo de diagnóstico.</div>`
+          : ''}
       </div>
       <div class="field" style="margin-bottom:12px">
         <div class="field-label">Nota para el cliente (opcional)</div>
