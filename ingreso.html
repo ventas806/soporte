@@ -1060,6 +1060,18 @@ async function submitForm() {
       } catch (_) { /* no bloquea */ }
     }
 
+    // 7b ── Notificar al admin sobre nuevo ticket ingresado ──────
+    try {
+      const adminTicketUrl = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticket.id}`;
+      await fetch('https://uzhjnedhmbvgfqqssuov.supabase.co/functions/v1/send-whatsapp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: '50432876364',
+          message: `🔔 *Nuevo ticket ingresado — Focus Store*\n\n🎫 *#${tNum}*\n👤 Cliente: ${clientName}\n📞 Tel: ${clientPhone || '—'}\n💻 Equipo: ${v('brand') || ''} ${v('model') || ''}\n🔍 Falla: ${(v('reportedFault') || '').substring(0, 200)}\n\n📋 Asignar técnico / dar seguimiento:\n${adminTicketUrl}`
+        })
+      });
+    } catch (_) { /* no bloquea */ }
+
     // 8 ── Redirect to confirmation ─────────────────────────────
     const q = new URLSearchParams({
       ticket: ticket.ticket_number,
