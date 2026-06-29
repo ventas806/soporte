@@ -916,6 +916,26 @@ async function marcarRecibido(ticketId, e) {
       .eq('id', ticketId);
     if (error) throw error;
     showToast('📬 Equipo marcado como recibido');
+
+    // Notificar al cliente por WhatsApp que su equipo fue recibido (no bloquea)
+    const t  = allTickets.find(x => x.id === ticketId);
+    const cu = t?.sp_customers;
+    if (cu?.phone) {
+      const brand = t.sp_equipment?.brand || '';
+      const model = t.sp_equipment?.model || '';
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone,
+            ticket_id: ticketId,
+            message: `📬 *Focus Store Soporte*\n\nHola ${cu.full_name}, confirmamos que recibimos tu *${brand} ${model}* en nuestro taller. 📦\n\n🎫 Ticket: #${t.ticket_number}\n\nEn breve será asignado a un técnico para su diagnóstico. Te mantendremos al tanto por este medio.\n\n📍 *Focus Store Honduras*\n¡Gracias por tu confianza! 🙏`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
     setTimeout(() => loadTickets(), 600);
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
