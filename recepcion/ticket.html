@@ -1695,13 +1695,18 @@ function renderInternalQuote() {
   const statusHtml = quoteStatusBadge(q.status);
   const creator = q.sp_profiles?.full_name || 'Técnico';
 
+  // El proceso ya no espera esta aprobación si la reparación arrancó o el ticket se cerró/canceló.
+  const procesoAvanzado = ['en_reparacion','en_pruebas','listo_para_entrega','entregado','cerrado','cancelado','abandonado','irreparable'].includes(ticketData?.status);
+
   let actionsHtml = '';
-  if (q.status === 'pendiente' && canManage) {
+  if (q.status === 'pendiente' && canManage && !procesoAvanzado) {
     actionsHtml = `
       <div class="action-row" style="margin-top:14px">
         <button class="btn btn-success" onclick="approveInternalQuote('${q.id}')">✅ Aprobar cotización</button>
         <button class="btn btn-danger"  onclick="openRejectModal('${q.id}','interna')">✗ Rechazar</button>
       </div>`;
+  } else if (q.status === 'pendiente' && procesoAvanzado) {
+    actionsHtml = `<div style="font-size:12px;color:var(--muted);margin-top:12px;padding:8px 12px;background:var(--bg);border-radius:8px">ℹ️ El proceso de este ticket ya avanzó; esta cotización interna ya no requiere aprobación.</div>`;
   }
   if (q.status === 'rechazada' && q.rejection_reason) {
     actionsHtml += `<div class="rejection-box">Motivo de rechazo: ${esc(q.rejection_reason)}</div>`;
