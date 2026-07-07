@@ -1627,8 +1627,27 @@ async function addNote() {
       content:   note
     });
     if (error) throw error;
+
+    // Notificar por WhatsApp al técnico asignado para que revise las notas (no bloquea)
+    const tech = ticketData?.assigned_to ? techProfiles[ticketData.assigned_to] : null;
+    if (tech?.phone) {
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: tech.phone,
+            ticket_id: ticketId,
+            recipient_type: 'staff',
+            message: `📝 *Nueva nota interna — Ticket #${ticketData.ticket_number}*\n\n${session.full_name} agregó una nota:\n\n"${note.substring(0, 200)}"\n\n💻 Equipo: ${brand} ${model}\n\n👀 Revisa las notas del ticket en tu panel:\nhttps://soporte.focusstore.net/tecnico/index.html`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
     document.getElementById('newNote').value = '';
-    showToast('✅ Nota agregada');
+    showToast(tech?.phone ? '✅ Nota agregada — técnico notificado' : '✅ Nota agregada');
     setTimeout(() => location.reload(), 800);
   } catch (ex) {
     showToast('⚠️ Error: ' + ex.message);
