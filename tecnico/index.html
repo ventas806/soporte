@@ -1140,6 +1140,38 @@ async function confirmActModal() {
       } catch(_) {}
     }
 
+    // Notificar a admins/supervisores del cambio de estado (WA)
+    try {
+      const statusLabels = { repair: '🔧 En reparación', testing: '🧪 En pruebas', ready: '🎉 Listo para retiro' };
+      const techName  = session.full_name || 'Técnico';
+      const ticketURL = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticketId}`;
+      const estLine   = days > 0 ? `\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*` : '';
+      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t.ticket_number}*\n\n👨‍🔧 ${techName} movió el ticket a *${statusLabels[action]}*.\n\n🖥️ Equipo: ${brand} ${model}${estLine}\n\n🔗 ${ticketURL}`;
+
+      // Siempre notificar al admin principal
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: '50432876364', message: adminMsg })
+        });
+      } catch(_) {}
+
+      // Otros admins/supervisores con teléfono distinto
+      const { data: admins } = await sb.from('sp_profiles')
+        .select('phone')
+        .in('role', ['admin', 'supervisor']);
+      for (const admin of admins || []) {
+        if (admin.phone && admin.phone.replace(/\D/g,'') !== '50432876364') {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: admin.phone, message: adminMsg })
+            });
+          } catch(_) {}
+        }
+      }
+    } catch(_) { /* no bloquea */ }
+
     showToast('✅ Estado actualizado — cliente notificado');
     setTimeout(() => loadTickets(), 800);
   } catch (ex) { restoreBtn?.(); showToast('⚠️ Error: ' + ex.message); }
