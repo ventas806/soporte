@@ -1134,6 +1134,7 @@ function toggleDeadlineEdit(show) {
 async function saveDeadline() {
   const val = document.getElementById('deadlineInput')?.value;
   if (!val) { showToast('⚠️ Selecciona una fecha'); return; }
+  const fechaAnterior = ticketData?.repair_expected_at || null;
   try {
     const { error } = await sb.from('sp_tickets').update({
       repair_expected_at: val,
@@ -1141,7 +1142,29 @@ async function saveDeadline() {
       last_overdue_alert_at: null       // resetear recordatorios de atraso
     }).eq('id', ticketId);
     if (error) throw error;
-    showToast('✅ Fecha límite actualizada');
+
+    // Si la fecha cambió, avisar al cliente por WhatsApp de la nueva fecha estimada (no bloquea)
+    let notificado = false;
+    const cu = ticketData?.sp_customers;
+    if (val !== fechaAnterior && cu?.phone) {
+      const brand   = ticketData.sp_equipment?.brand || '';
+      const model   = ticketData.sp_equipment?.model || '';
+      const dateStr = new Date(val + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' });
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone,
+            ticket_id: ticketId,
+            recipient_type: 'client',
+            message: `📅 *Focus Store Soporte — Actualización de fecha*\n\nHola ${cu.full_name}, actualizamos la fecha estimada de entrega de tu *${brand} ${model}*.\n\n🎫 Ticket: #${ticketData.ticket_number}\n📅 Nueva fecha estimada de entrega: *${dateStr}*\n\nAgradecemos tu paciencia. Te avisaremos apenas esté listo para retiro. 🙏\n*Focus Store Honduras*`
+          })
+        });
+        notificado = true;
+      } catch (_) { /* no bloquea */ }
+    }
+
+    showToast(notificado ? '✅ Fecha actualizada — cliente notificado' : '✅ Fecha límite actualizada');
     setTimeout(() => location.reload(), 600);
   } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
 }
