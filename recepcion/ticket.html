@@ -2460,16 +2460,26 @@ function renderBalanceCard(t) {
        </button>`
     : '';
 
+  // Desglose completo: Cotización (bruto) − Crédito diagnóstico = Total cotizado − Pagado = Saldo
+  const q       = quoteClient || {};
+  const bruto   = parseFloat(q.subtotal || 0) + parseFloat(q.tax_amount || 0);
+  const credito = (q.diagnosis_credited && parseFloat(q.diagnosis_fee) > 0) ? parseFloat(q.diagnosis_fee) : 0;
+  const hasCredit = credito > 0;
+  const row = (label, val, color) => `
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--muted)">${label}</span>
+      <span style="font-size:13px;font-weight:700${color ? `;color:${color}` : ''}">${val}</span>
+    </div>`;
+  const topRows = hasCredit
+    ? row('Cotización', fmt(bruto))
+      + row('Crédito por diagnóstico', '-' + fmt(credito), 'var(--green)')
+      + row('Total cotizado', fmt(total))
+    : row('Total cotizado', fmt(total));
+
   el.innerHTML = `
     <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gold);margin-bottom:10px">💰 Saldo del cliente</div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span style="font-size:12px;color:var(--muted)">Total cotizado</span>
-      <span style="font-size:13px;font-weight:700">${fmt(total)}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-      <span style="font-size:12px;color:var(--muted)">Pagado</span>
-      <span style="font-size:13px;font-weight:700;color:var(--green)">${fmt(paid)}</span>
-    </div>
+    ${topRows}
+    ${row('Pagado', '-' + fmt(paid), 'var(--green)')}
     ${saldoRow}
     ${payBtn}`;
 }
