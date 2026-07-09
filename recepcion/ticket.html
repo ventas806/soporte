@@ -2270,7 +2270,7 @@ async function sendClientQuote(btn) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone,
-            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n💵 *Total:* L. ${totalFmt}\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
+            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n💵 *Total:* L. ${totalFmt}\n\nℹ️ Si apruebas, cualquier pago que hayas hecho por diagnóstico se acreditará a este total, y se te pedirá un adelanto (%) para iniciar la reparación.\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
           })
         });
       } catch (_) { /* no bloquea */ }
