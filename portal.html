@@ -523,6 +523,8 @@
         <div class="total-row" id="quoteDiagRow" style="display:none"><span class="label" style="color:#2ed573">✅ Crédito diagnóstico (ya pagado)</span><span class="amount" id="quoteDiag" style="color:#2ed573">—</span></div>
         <div class="total-row final"><span class="label">Total</span><span class="amount" id="quoteTotal">—</span></div>
         <div class="total-row" id="quoteAdvanceRow" style="display:none"><span class="label" style="color:var(--orange)">💳 Abono para iniciar reparación</span><span class="amount" id="quoteAdvance" style="color:var(--orange)">—</span></div>
+        <div class="total-row" id="quotePaidRow" style="display:none"><span class="label" style="color:#2ed573">💳 Abonado</span><span class="amount" id="quotePaid" style="color:#2ed573">—</span></div>
+        <div class="total-row" id="quoteSaldoRow" style="display:none"><span class="label" style="color:var(--orange);font-weight:700">Saldo pendiente</span><span class="amount" id="quoteSaldo" style="color:var(--orange);font-weight:800">—</span></div>
       </div>
       <div id="quoteDaysSection" style="display:none;background:rgba(61,106,255,.08);border:1px solid rgba(61,106,255,.25);border-radius:10px;padding:12px 14px;margin:12px 0"></div>
       <div class="quote-validity" id="quoteValidity"></div>
@@ -667,7 +669,7 @@ async function loadTicket() {
         created_at, estimated_ready_at, delivered_at, closed_at,
         warranty_days, warranty_expires_at,
         equipment_id, token_expires_at,
-        payment_amount, payment_notified_at,
+        payment_amount, paid_amount, payment_notified_at,
         sp_equipment!sp_tickets_equipment_id_fkey (
           category, brand, model, serial_number, physical_condition, accessories
         ),
@@ -856,9 +858,17 @@ function renderQuote(q) {
     document.getElementById('quoteDiagRow').style.display = '';
   }
 
-  // Abono para iniciar la reparación (si el administrador ya lo definió)
-  if (ticketData && Number(ticketData.payment_amount) > 0) {
-    document.getElementById('quoteAdvance').textContent = 'L ' + fmt(ticketData.payment_amount);
+  // Pagos: si ya abonó → mostrar Abonado + Saldo pendiente; si no → Abono para iniciar
+  const paid    = Number(ticketData?.paid_amount)    || 0;
+  const advance = Number(ticketData?.payment_amount) || 0;
+  const saldo   = Math.max(0, Number(q.total) - paid);
+  if (paid > 0) {
+    document.getElementById('quotePaid').textContent = '-L ' + fmt(paid);
+    document.getElementById('quotePaidRow').style.display = '';
+    document.getElementById('quoteSaldo').textContent = 'L ' + fmt(saldo);
+    document.getElementById('quoteSaldoRow').style.display = '';
+  } else if (advance > 0) {
+    document.getElementById('quoteAdvance').textContent = 'L ' + fmt(advance);
     document.getElementById('quoteAdvanceRow').style.display = '';
   }
 
