@@ -520,7 +520,9 @@
       <div class="quote-totals">
         <div class="total-row"><span class="label">Subtotal</span><span class="amount" id="quoteSubtotal">—</span></div>
         <div class="total-row" id="quoteTaxRow"><span class="label">ISV (15%)</span><span class="amount" id="quoteTax">—</span></div>
+        <div class="total-row" id="quoteDiagRow" style="display:none"><span class="label" style="color:#2ed573">✅ Crédito diagnóstico (ya pagado)</span><span class="amount" id="quoteDiag" style="color:#2ed573">—</span></div>
         <div class="total-row final"><span class="label">Total</span><span class="amount" id="quoteTotal">—</span></div>
+        <div class="total-row" id="quoteAdvanceRow" style="display:none"><span class="label" style="color:var(--orange)">💳 Abono para iniciar reparación</span><span class="amount" id="quoteAdvance" style="color:var(--orange)">—</span></div>
       </div>
       <div id="quoteDaysSection" style="display:none;background:rgba(61,106,255,.08);border:1px solid rgba(61,106,255,.25);border-radius:10px;padding:12px 14px;margin:12px 0"></div>
       <div class="quote-validity" id="quoteValidity"></div>
@@ -847,6 +849,18 @@ function renderQuote(q) {
     document.getElementById('quoteTaxRow').style.display = 'none';
   }
   document.getElementById('quoteTotal').textContent = 'L ' + fmt(q.total);
+
+  // Crédito por diagnóstico ya pagado (para que Subtotal + ISV − Crédito = Total cuadre)
+  if (q.diagnosis_credited && Number(q.diagnosis_fee) > 0) {
+    document.getElementById('quoteDiag').textContent = '-L ' + fmt(q.diagnosis_fee);
+    document.getElementById('quoteDiagRow').style.display = '';
+  }
+
+  // Abono para iniciar la reparación (si el administrador ya lo definió)
+  if (ticketData && Number(ticketData.payment_amount) > 0) {
+    document.getElementById('quoteAdvance').textContent = 'L ' + fmt(ticketData.payment_amount);
+    document.getElementById('quoteAdvanceRow').style.display = '';
+  }
 
   // Validity
   if (q.expires_at) {
