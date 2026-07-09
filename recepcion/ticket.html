@@ -651,6 +651,9 @@
       <!-- ── Plazo de pruebas ──────────────────────────────── -->
       <div class="card" id="testingDeadlineCard" style="display:none;padding:16px"></div>
 
+      <!-- ── Días de trabajo (recalculan la fecha de entrega) ── -->
+      <div class="card" id="workDaysCard" style="display:none;padding:16px"></div>
+
       <!-- ── Customer info ─────────────────────────────────── -->
       <div class="card">
         <div class="card-header"><h3>Cliente</h3></div>
@@ -1276,6 +1279,131 @@ async function saveTestingDeadline() {
   } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
 }
 
+/* ── Días de trabajo → recalculan la fecha de entrega (ancla: aprobación) ── */
+function computeDeliveryFromDays(approvedAt, totalDays) {
+  const anchor = (approvedAt || '').split('T')[0];
+  if (!anchor) return null;
+  const d = new Date(anchor + 'T12:00:00');
+  d.setDate(d.getDate() + totalDays);
+  return d.toISOString().split('T')[0];
+}
+
+function renderWorkDaysCard(t) {
+  const el = document.getElementById('workDaysCard');
+  if (!el) return;
+  const q = quoteInternal;
+  const isAdmin = ['admin','supervisor'].includes(session?.role);
+
+  // Solo con cotización interna aprobada (su fecha de aprobación es el ancla del cálculo)
+  if (!q || q.status !== 'aprobada' || !q.approved_at) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const r = q.repair_days || 0, p = q.parts_days || 0, te = q.testing_days || 0;
+  const total = r + p + te;
+  const entrega    = t.repair_expected_at;
+  const fmtEntrega = entrega ? new Date(entrega + 'T12:00:00').toLocaleDateString('es-HN',{dateStyle:'long'}) : '—';
+  const fmtAprob   = new Date(q.approved_at).toLocaleDateString('es-HN',{dateStyle:'medium'});
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">⏱️ Días estimados de trabajo</span>
+      ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleWorkDaysEdit(true)">✏️ Editar</button>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:5px 16px;font-size:13px">
+      <span>🔧 Reparación</span><span style="font-weight:700;text-align:right">${r} día(s)</span>
+      <span>📦 Repuesto</span><span style="font-weight:700;text-align:right">${p} día(s)</span>
+      <span>🧪 Pruebas</span><span style="font-weight:700;text-align:right">${te} día(s)</span>
+      <span style="border-top:1px solid var(--border);padding-top:6px;color:var(--accent);font-weight:700">Total</span>
+      <span style="border-top:1px solid var(--border);padding-top:6px;font-weight:800;color:var(--accent);text-align:right">${total} día(s)</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px">📅 Entrega = aprobación (${fmtAprob}) + ${total} día(s) = <strong style="color:var(--text)">${fmtEntrega}</strong></div>
+    ${isAdmin ? workDaysEditForm(r, p, te) : ''}`;
+}
+
+function workDaysEditForm(r, p, te) {
+  const inp = (id, val) => `<input type="number" id="${id}" min="0" max="90" value="${val}" oninput="previewWorkDays()" style="width:72px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px;text-align:center">`;
+  return `
+    <div id="workDaysEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;font-size:13px">
+        <span>🔧 Días de reparación</span>${inp('wdRepair', r)}
+        <span>📦 Días de repuesto</span>${inp('wdParts', p)}
+        <span>🧪 Días de pruebas</span>${inp('wdTesting', te)}
+      </div>
+      <div id="wdPreview" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveWorkDays()">Guardar y recalcular</button>
+        <button class="btn btn-ghost"   style="padding:7px 12px;font-size:13px" onclick="toggleWorkDaysEdit(false)">Cancelar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">La fecha de entrega se recalcula (aprobación + total de días) y se notifica al cliente.</div>
+    </div>`;
+}
+
+function toggleWorkDaysEdit(show) {
+  const f = document.getElementById('workDaysEditForm');
+  if (f) f.style.display = show ? 'block' : 'none';
+  if (show) previewWorkDays();
+}
+
+function previewWorkDays() {
+  const q = quoteInternal; if (!q) return;
+  const r  = parseInt(document.getElementById('wdRepair')?.value)  || 0;
+  const p  = parseInt(document.getElementById('wdParts')?.value)   || 0;
+  const te = parseInt(document.getElementById('wdTesting')?.value) || 0;
+  const total = r + p + te;
+  const nueva = computeDeliveryFromDays(q.approved_at, total);
+  const fmt = nueva ? new Date(nueva + 'T12:00:00').toLocaleDateString('es-HN',{dateStyle:'long'}) : '—';
+  const el = document.getElementById('wdPreview');
+  if (el) el.innerHTML = `Nueva entrega: <strong style="color:var(--accent)">${fmt}</strong> (${total} día(s) desde la aprobación)`;
+}
+
+async function saveWorkDays() {
+  const q = quoteInternal;
+  if (!q || !q.approved_at) { showToast('⚠️ No hay cotización aprobada'); return; }
+  const r  = parseInt(document.getElementById('wdRepair')?.value)  || 0;
+  const p  = parseInt(document.getElementById('wdParts')?.value)   || 0;
+  const te = parseInt(document.getElementById('wdTesting')?.value) || 0;
+  const total = r + p + te;
+  if (total < 1) { showToast('⚠️ El total de días debe ser al menos 1'); return; }
+  const nuevaEntrega = computeDeliveryFromDays(q.approved_at, total);
+  if (!nuevaEntrega) { showToast('⚠️ No se pudo calcular la fecha'); return; }
+  const anterior = ticketData?.repair_expected_at || null;
+  try {
+    // 1) Guardar los días en la cotización interna
+    const { error: e1 } = await sb.from('sp_repair_quotes')
+      .update({ repair_days: r, parts_days: p, testing_days: te })
+      .eq('id', q.id);
+    if (e1) throw e1;
+    // 2) Recalcular la fecha de entrega + resetear avisos de plazo
+    const { error: e2 } = await sb.from('sp_tickets').update({
+      repair_expected_at:       nuevaEntrega,
+      deadline_warning_sent_at: null,
+      last_overdue_alert_at:    null
+    }).eq('id', ticketId);
+    if (e2) throw e2;
+
+    // 3) Notificar al cliente la nueva fecha de entrega (si cambió)
+    let notificado = false;
+    const cu = ticketData?.sp_customers;
+    if (nuevaEntrega !== anterior && cu?.phone) {
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const dateStr = new Date(nuevaEntrega + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' });
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
+            message: `📅 *Focus Store Soporte — Actualización de fecha*\n\nHola ${cu.full_name}, actualizamos la fecha estimada de entrega de tu *${brand} ${model}*.\n\n🎫 Ticket: #${ticketData.ticket_number}\n📅 Nueva fecha estimada de entrega: *${dateStr}*\n\nAgradecemos tu paciencia. Te avisaremos apenas esté listo para retiro. 🙏\n*Focus Store Honduras*`
+          })
+        });
+        notificado = true;
+      } catch (_) { /* no bloquea */ }
+    }
+    showToast(notificado ? '✅ Días actualizados — entrega recalculada y cliente notificado' : '✅ Días actualizados — entrega recalculada');
+    setTimeout(() => location.reload(), 700);
+  } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
 function renderTimeline(history) {
   document.getElementById('histCount').textContent = history.length + ' cambio' + (history.length !== 1 ? 's' : '');
   if (!history.length) {
@@ -1821,6 +1949,7 @@ async function loadQuotes() {
   renderInternalQuote();
   renderClientQuote();
   if (ticketData) renderBalanceCard(ticketData);
+  if (ticketData) renderWorkDaysCard(ticketData);
 
   // Re-renderizar banner con info actualizada de cotizaciones
   if (ticketData) renderNextStep(ticketData.status);
