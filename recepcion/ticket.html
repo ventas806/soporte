@@ -648,6 +648,9 @@
       <!-- ── Fecha límite de reparación ────────────────────── -->
       <div class="card" id="deadlineCard" style="display:none;padding:16px"></div>
 
+      <!-- ── Plazo de pruebas ──────────────────────────────── -->
+      <div class="card" id="testingDeadlineCard" style="display:none;padding:16px"></div>
+
       <!-- ── Customer info ─────────────────────────────────── -->
       <div class="card">
         <div class="card-header"><h3>Cliente</h3></div>
@@ -968,6 +971,9 @@ function renderTicket(t, history, msgs, notes) {
   // Fecha límite de reparación
   renderDeadlineCard(t);
 
+  // Plazo de pruebas
+  renderTestingDeadlineCard(t);
+
   // Timeline
   renderTimeline(history);
 
@@ -1049,6 +1055,12 @@ function toggleDiagDeadlineEdit(show) {
 async function saveDiagnosisDeadline() {
   const val = document.getElementById('diagDeadlineInput')?.value;
   if (!val) { showToast('⚠️ Selecciona una fecha'); return; }
+  // Advertir si supera la fecha de entrega comprometida (si ya existe)
+  const entrega = ticketData?.repair_expected_at;
+  if (entrega && val > entrega) {
+    const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('es-HN', { dateStyle: 'long' });
+    if (!confirm(`⚠️ La nueva fecha de diagnóstico (${fmt(val)}) es POSTERIOR a la fecha de entrega comprometida (${fmt(entrega)}).\n\n¿Continuar de todas formas?`)) return;
+  }
   try {
     const { error } = await sb.from('sp_tickets').update({
       diagnosis_expected_at:               val,
@@ -1165,6 +1177,101 @@ async function saveDeadline() {
     }
 
     showToast(notificado ? '✅ Fecha actualizada — cliente notificado' : '✅ Fecha límite actualizada');
+    setTimeout(() => location.reload(), 600);
+  } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
+}
+
+/* ── Plazo de pruebas ───────────────────────────────────────── */
+function renderTestingDeadlineCard(t) {
+  const el = document.getElementById('testingDeadlineCard');
+  if (!el) return;
+
+  if (t.status !== 'en_pruebas') { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const isAdmin  = ['admin','supervisor'].includes(session?.role);
+  const deadline = t.testing_expected_at;
+
+  if (!deadline) {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">🧪 Plazo de pruebas</span>
+        ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleTestingDeadlineEdit(true)">✏️ Establecer</button>` : ''}
+      </div>
+      <div style="font-size:13px;color:var(--muted);font-style:italic">Sin plazo de pruebas establecido</div>
+      ${isAdmin ? testingDeadlineEditForm() : ''}`;
+    return;
+  }
+
+  const dLine    = new Date(deadline + 'T12:00:00');
+  const diffDays = Math.ceil((dLine.getTime() - Date.now()) / 86400000);
+  const isPast   = diffDays < 0;
+  const isToday  = diffDays === 0;
+  const isTomorrow = diffDays === 1;
+
+  const fmtDeadline = dLine.toLocaleDateString('es-HN', { dateStyle: 'long' });
+  let statusColor = '#2ed573';
+  let statusMsg   = `✅ Faltan <strong>${diffDays}</strong> día(s)`;
+  if (isPast)     { statusColor = '#ff4757'; statusMsg = `🔴 <strong>${Math.abs(diffDays)}</strong> día(s) de retraso en pruebas`; }
+  if (isToday)    { statusColor = '#ff9f43'; statusMsg = `⚠️ <strong>Vence hoy</strong>`; }
+  if (isTomorrow) { statusColor = '#f5c842'; statusMsg = `⏰ <strong>Vence mañana</strong>`; }
+
+  // Advertencia si el plazo de pruebas supera la fecha de entrega comprometida
+  let warnHtml = '';
+  const entrega = t.repair_expected_at;
+  if (entrega && deadline > entrega) {
+    const fmtEnt = new Date(entrega + 'T12:00:00').toLocaleDateString('es-HN', { dateStyle: 'long' });
+    warnHtml = `<div style="margin-top:10px;font-size:12px;color:#ff9f43;background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.35);border-radius:8px;padding:8px 12px">⚠️ El plazo de pruebas supera la fecha de entrega comprometida (${fmtEnt}). El equipo se entregaría tarde.</div>`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">🧪 Plazo de pruebas</span>
+      ${isAdmin ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleTestingDeadlineEdit(true)">✏️ Editar</button>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:18px;font-weight:800;color:${statusColor}">${fmtDeadline}</span>
+      <span style="font-size:13px;color:${statusColor}">${statusMsg}</span>
+    </div>
+    ${warnHtml}
+    ${isAdmin ? testingDeadlineEditForm(deadline) : ''}`;
+}
+
+function testingDeadlineEditForm(current = '') {
+  return `
+    <div id="testingDeadlineEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Nueva fecha límite de pruebas:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="testingDeadlineInput" value="${current}" min="${new Date().toISOString().split('T')[0]}"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--fg);font-size:13px">
+        <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveTestingDeadline()">Guardar</button>
+        <button class="btn btn-ghost"   style="padding:7px 12px;font-size:13px" onclick="toggleTestingDeadlineEdit(false)">Cancelar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">⚠️ Al cambiar la fecha se reinician los avisos automáticos al técnico.</div>
+    </div>`;
+}
+
+function toggleTestingDeadlineEdit(show) {
+  const f = document.getElementById('testingDeadlineEditForm');
+  if (f) f.style.display = show ? 'block' : 'none';
+}
+
+async function saveTestingDeadline() {
+  const val = document.getElementById('testingDeadlineInput')?.value;
+  if (!val) { showToast('⚠️ Selecciona una fecha'); return; }
+  // Advertir si supera la fecha de entrega comprometida
+  const entrega = ticketData?.repair_expected_at;
+  if (entrega && val > entrega) {
+    const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('es-HN', { dateStyle: 'long' });
+    if (!confirm(`⚠️ La nueva fecha de pruebas (${fmt(val)}) es POSTERIOR a la fecha de entrega comprometida (${fmt(entrega)}).\n\nEl equipo se entregaría tarde. ¿Continuar de todas formas?`)) return;
+  }
+  try {
+    const { error } = await sb.from('sp_tickets').update({
+      testing_expected_at:           val,
+      last_testing_overdue_alert_at: null   // resetear recordatorio diario de pruebas
+    }).eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Plazo de pruebas actualizado');
     setTimeout(() => location.reload(), 600);
   } catch(ex) { showToast('⚠️ Error: ' + ex.message); }
 }
