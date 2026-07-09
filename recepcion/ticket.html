@@ -2096,7 +2096,7 @@ function buildClientQuoteForm(prefill) {
         </div>
         <div class="qlt-item"><div class="qlt-label" style="font-size:13px;font-weight:700">TOTAL A PAGAR</div><div class="qlt-val cli" style="font-size:20px" id="qltTotal">L 0.00</div></div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer">
-          <input type="checkbox" id="isvCheck" onchange="recalcBuild()" checked> Aplicar ISV 15%
+          <input type="checkbox" id="isvCheck" onchange="recalcBuild()"> Aplicar ISV 15%
         </label>
       </div>
       ${(() => {
@@ -2265,9 +2265,14 @@ async function sendClientQuote(btn) {
     if (cu?.phone) {
       const fmtL      = n => n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
       const hasCredit = diagCredit && diagFee > 0;
-      const desglose  = hasCredit
-        ? `💵 *Monto reparación:* L. ${fmtL(sub + taxAmount)}\n➖ *Crédito por diagnóstico:* -L. ${fmtL(diagFee)}\n💰 *Total a pagar:* L. ${fmtL(total)}`
-        : `💰 *Total a pagar:* L. ${fmtL(total)}`;
+      const desglose  = (() => {
+        if (taxAmount <= 0 && !hasCredit) return `💰 *Total a pagar:* L. ${fmtL(total)}`;
+        const lines = [`🧾 *Subtotal:* L. ${fmtL(sub)}`];
+        if (taxAmount > 0) lines.push(`➕ *ISV 15%:* L. ${fmtL(taxAmount)}`);
+        if (hasCredit)     lines.push(`➖ *Crédito por diagnóstico:* -L. ${fmtL(diagFee)}`);
+        lines.push(`💰 *Total a pagar:* L. ${fmtL(total)}`);
+        return lines.join('\n');
+      })();
       const infoLine  = hasCredit
         ? `ℹ️ Tu pago de diagnóstico ya está acreditado en este total. Al aprobar se te pedirá un adelanto (%) para iniciar la reparación.`
         : `ℹ️ Si apruebas, cualquier pago que hayas hecho por diagnóstico se acreditará a este total, y se te pedirá un adelanto (%) para iniciar la reparación.`;
