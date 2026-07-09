@@ -2263,14 +2263,21 @@ async function sendClientQuote(btn) {
       } catch (_) { /* no bloquea */ }
     }
     if (cu?.phone) {
-      const totalFmt = total.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+      const fmtL      = n => n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+      const hasCredit = diagCredit && diagFee > 0;
+      const desglose  = hasCredit
+        ? `💵 *Monto reparación:* L. ${fmtL(sub + taxAmount)}\n➖ *Crédito por diagnóstico:* -L. ${fmtL(diagFee)}\n💰 *Total a pagar:* L. ${fmtL(total)}`
+        : `💰 *Total a pagar:* L. ${fmtL(total)}`;
+      const infoLine  = hasCredit
+        ? `ℹ️ Tu pago de diagnóstico ya está acreditado en este total. Al aprobar se te pedirá un adelanto (%) para iniciar la reparación.`
+        : `ℹ️ Si apruebas, cualquier pago que hayas hecho por diagnóstico se acreditará a este total, y se te pedirá un adelanto (%) para iniciar la reparación.`;
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone,
-            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n💵 *Total:* L. ${totalFmt}\n\nℹ️ Si apruebas, cualquier pago que hayas hecho por diagnóstico se acreditará a este total, y se te pedirá un adelanto (%) para iniciar la reparación.\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
+            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n${infoLine}\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
           })
         });
       } catch (_) { /* no bloquea */ }
