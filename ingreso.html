@@ -713,6 +713,12 @@
       <p>Su equipo será recibido directamente en tienda. El ticket quedará registrado con estado <strong>Equipo Recibido</strong>.</p>
     </div>
 
+    <div class="field" id="depositoField" style="display:none">
+      <label for="diagFee">💰 Depósito recibido (diagnóstico / reparación)</label>
+      <input type="number" id="diagFee" min="0" step="0.01" placeholder="0.00" inputmode="decimal">
+      <p style="font-size:12px;color:#8892a4;margin-top:4px">Monto que el cliente deja como depósito. Se acredita a la reparación si aprueba la cotización.</p>
+    </div>
+
     <div class="terms-scroll" id="termsText">
       Al entregar su equipo acepta nuestra política de servicio. El diagnóstico tiene un costo que se acredita si aprueba la reparación. El cliente tiene 15 días calendario para retirar el equipo una vez notificado. Después se aplicará un costo de almacenamiento diario. El equipo puede ser declarado abandonado si no es retirado en 60 días.
     </div>
@@ -805,6 +811,7 @@ function init() {
     badge.textContent = '📍 En tienda';
     badge.className   = 'mode-badge presencial';
     document.getElementById('presencialBanner').style.display = 'flex';
+    document.getElementById('depositoField').style.display = 'block';
   }
 
   // Courier toggle
@@ -1005,6 +1012,7 @@ async function submitForm() {
       client_notes:         v('clientNotes') || null,
       terms_accepted:       true,
       terms_accepted_at:    new Date().toISOString(),
+      diagnosis_fee:        isPresencial ? (parseFloat(v('diagFee')) || 0) : 0,
       shipping_method:      shippingMethod,
       courier_name:         courierName,
       tracking_number:      trackingNum,
