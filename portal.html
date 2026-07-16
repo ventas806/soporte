@@ -735,7 +735,10 @@ async function loadTicket() {
 ═══════════════════════════════════════════════════════════════ */
 function renderTicket(t, history, msgs) {
   const eq  = t.sp_equipment;
-  const st  = STATUS_MAP[t.status] || { label: t.status, pill: 'pill-gris' };
+  // Si está "esperando_aprobacion" pero aún no hay cotización AL CLIENTE (solo la interna
+  // del técnico, pendiente de revisión del admin) → mostrar como "En diagnóstico", sin pedir aprobación.
+  const displayStatus = (t.status === 'esperando_aprobacion' && !quoteData) ? 'en_diagnostico' : t.status;
+  const st  = STATUS_MAP[displayStatus] || { label: t.status, pill: 'pill-gris' };
 
   // Header
   document.getElementById('ticketNum').textContent  = t.ticket_number;
@@ -754,7 +757,7 @@ function renderTicket(t, history, msgs) {
     (eq.serial_number ? ` · S/N: ${eq.serial_number}` : '');
 
   // Action banners
-  if (t.status === 'esperando_aprobacion') {
+  if (displayStatus === 'esperando_aprobacion') {
     document.getElementById('bannerCotizacion').classList.add('show');
   }
   if (t.status === 'listo_para_entrega') {
@@ -820,7 +823,7 @@ function renderTicket(t, history, msgs) {
   if (quoteData) renderQuote(quoteData);
 
   // Timeline
-  renderTimeline(t.status, history);
+  renderTimeline(displayStatus, history);
 
   // Messages
   renderMessages(msgs);
