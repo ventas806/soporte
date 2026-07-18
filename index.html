@@ -255,7 +255,7 @@ function getSession() {
   try {
     const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
     if (!s) return null;
-    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) {
+    if (Date.now() - s.logged_in_at > 8 * 3600 * 1000) {
       localStorage.removeItem('sp_session'); return null;
     }
     return s;

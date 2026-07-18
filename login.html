@@ -479,8 +479,8 @@ function getSession() {
   try {
     const s = JSON.parse(localStorage.getItem('sp_session') || 'null');
     if (!s) return null;
-    // Session expires after 12 hours
-    if (Date.now() - s.logged_in_at > 12 * 3600 * 1000) {
+    // Session expires after 8 hours
+    if (Date.now() - s.logged_in_at > 8 * 3600 * 1000) {
       localStorage.removeItem('sp_session');
       return null;
     }
