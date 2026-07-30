@@ -3066,6 +3066,7 @@ const NEXT_STEPS = {
   en_diagnostico:       { text: 'Esperando que el técnico envíe su cotización interna.',              btn: '👁 Ver cotización técnico',       color: '#8892a4', action: 'ver_cotizacion' },
   esperando_aprobacion: { text: 'El técnico envió su cotización. Revísala para aprobar o rechazar.',  btn: '✅ Revisar cotización',          color: '#f5c842', action: 'ver_cotizacion' },
   esperando_aprobacion_interna_ok: { text: '✅ Cotización del técnico aprobada. Envía una cotización al cliente para su aprobación, o aprueba la reparación directamente.', btn: '📤 Enviar cotización al cliente', color: '#3d6aff', action: 'cotizar_cliente', btn2: { label: '⚡ Aprobar directo (sin cliente)', fn: 'approveDirectly()' } },
+  esperando_aprobacion_cliente:    { text: '📤 Cotización enviada al cliente. Esperando su aprobación en el portal. Si surgió trabajo adicional, puedes editarla.', btn: '👁 Ver cotización al cliente', color: '#f5c842', action: 'ver_cotizacion' },
   pendiente_pago:       { text: 'El cliente aprobó la reparación. Define el monto a cobrar y envía las instrucciones de pago, o continúa sin cobro.', btn: '💳 Gestionar pago', color: '#ff9f43', action: 'ver_pago', btn2: { label: '✅ Continuar sin cobro', fn: 'skipPayment()' } },
   aprobado_reparacion:  { text: '✅ El cliente aprobó la cotización. Aprueba la cotización del técnico para comenzar la reparación.', btn: '✅ Aprobar cotización del técnico', color: '#f5c842', action: 'ver_cotizacion' },
   aprobado_reparacion_listo: { text: '🔧 Cotización del técnico aprobada. El técnico puede iniciar la reparación en su panel.', btn: '🔧 Ver panel del técnico', color: '#2ed573', action: 'ver_panel_tecnico' },
@@ -3086,9 +3087,11 @@ function renderNextStep(status) {
   if (status === 'aprobado_reparacion' && quoteInternal?.status === 'aprobada') {
     effectiveStatus = 'aprobado_reparacion_listo';
   }
-  // Caso especial: esperando_aprobacion + cotización interna ya aprobada → mostrar opción de aprobar directo
+  // esperando_aprobacion + interna aprobada → depende de si YA se envió la cotización al cliente
   if (status === 'esperando_aprobacion' && quoteInternal?.status === 'aprobada') {
-    effectiveStatus = 'esperando_aprobacion_interna_ok';
+    effectiveStatus = (quoteClient?.status === 'pendiente')
+      ? 'esperando_aprobacion_cliente'      // ya enviada al cliente, esperando su respuesta
+      : 'esperando_aprobacion_interna_ok';  // falta enviar la cotización al cliente
   }
 
   const ns = NEXT_STEPS[effectiveStatus];
@@ -3138,7 +3141,7 @@ async function doNextStep() {
   // Misma lógica de effectiveStatus que renderNextStep
   let effectiveStatus = status;
   if (status === 'aprobado_reparacion' && quoteInternal?.status === 'aprobada') effectiveStatus = 'aprobado_reparacion_listo';
-  if (status === 'esperando_aprobacion' && quoteInternal?.status === 'aprobada') effectiveStatus = 'esperando_aprobacion_interna_ok';
+  if (status === 'esperando_aprobacion' && quoteInternal?.status === 'aprobada') effectiveStatus = (quoteClient?.status === 'pendiente') ? 'esperando_aprobacion_cliente' : 'esperando_aprobacion_interna_ok';
 
   const ns = NEXT_STEPS[effectiveStatus];
   if (!ns) return;
