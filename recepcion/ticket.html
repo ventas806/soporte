@@ -2133,7 +2133,7 @@ function buildClientQuoteForm(prefill, editId) {
       </div>
       <div style="display:flex;gap:10px">
         <button class="btn btn-success btn-full" onclick="${editId ? `updateClientQuote('${editId}', this)` : 'sendClientQuote(this)'}">
-          ${editId ? '💾 Guardar cambios' : '📤 Enviar cotización al cliente'}
+          ${editId ? '📤 Enviar cotización actualizada (re-aprobación)' : '📤 Enviar cotización al cliente'}
         </button>
       </div>
     </div>`;
@@ -2169,7 +2169,8 @@ function editClientQuote() {
 async function updateClientQuote(quoteId, btn) {
   if (!buildItems.length) { showToast('⚠️ Agregue al menos una línea'); return; }
   if (buildItems.some(i => !i.desc.trim() || i.price <= 0)) { showToast('⚠️ Complete todas las líneas (descripción y precio)'); return; }
-  const restore = btnLoad(btn, 'Guardando…');
+  if (!confirm('Se enviará la cotización actualizada al cliente para su RE-APROBACIÓN.\nEl ticket volverá a "Esperando aprobación" hasta que el cliente responda.\n\n¿Continuar?')) return;
+  const restore = btnLoad(btn, 'Enviando…');
 
   const sub        = buildItems.reduce((s, it) => s + (it.qty * it.price), 0);
   const diagFee    = parseFloat(document.getElementById('diagFee')?.value) || 0;
@@ -2179,11 +2180,16 @@ async function updateClientQuote(quoteId, btn) {
   const taxAmount  = sub * taxRate;
   const total      = sub + taxAmount - (diagCredit ? diagFee : 0);
   const note       = document.getElementById('cliQuoteNote')?.value.trim() || null;
+  const expiresAt  = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 
   try {
+    // Actualizar cotización y devolverla a "pendiente" (reinicia el ciclo de aprobación)
     const { error: qErr } = await sb.from('sp_repair_quotes').update({
       subtotal: sub, tax_rate: taxRate, tax_amount: taxAmount, total,
-      diagnosis_fee: diagFee, diagnosis_credited: diagCredit, notes: note
+      diagnosis_fee: diagFee, diagnosis_credited: diagCredit, notes: note,
+      status: 'pendiente', expires_at: expiresAt,
+      approved_at: null, approved_by: null, approved_by_client: null,
+      rejected_at: null, rejected_by: null, rejection_reason: null
     }).eq('id', quoteId);
     if (qErr) throw qErr;
 
@@ -2195,23 +2201,30 @@ async function updateClientQuote(quoteId, btn) {
       sort_order: i, catalog_item_id: it.catalogId || null
     })));
 
-    // Notificar al cliente del cambio (opcional)
+    // Ticket → esperando_aprobacion (re-aprobación del cliente)
+    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion' }).eq('id', ticketId);
+
+    // Notificar al cliente para que apruebe el nuevo total
     const cu = ticketData?.sp_customers;
-    if (cu?.phone && confirm(`Cotización actualizada. Nuevo total: L. ${fmt(total)}\n\n¿Notificar al cliente del cambio por WhatsApp?`)) {
+    if (cu?.phone) {
       const brand = ticketData.sp_equipment?.brand || '';
       const model = ticketData.sp_equipment?.model || '';
+      const hasCredit = diagCredit && diagFee > 0;
+      const desglose = hasCredit
+        ? `💵 *Cotización:* L. ${fmt(sub + taxAmount)}\n✅ *Crédito por diagnóstico:* L. ${fmt(diagFee)} (se descuenta al aprobar)\n💰 *Total a pagar si apruebas:* L. ${fmt(total)}`
+        : `💰 *Total a pagar:* L. ${fmt(total)}`;
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
-            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, se actualizó la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💰 Nuevo total a pagar: *L. ${fmt(total)}*\n\nRevisa el detalle en tu portal:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
+            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, actualizamos la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n✅ Revisa y aprueba (o rechaza) el nuevo total en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
           })
         });
       } catch (_) { /* no bloquea */ }
     }
 
-    showToast('✅ Cotización actualizada');
+    showToast('✅ Cotización actualizada — enviada para re-aprobación');
     setTimeout(() => location.reload(), 900);
   } catch (ex) { restore?.(); showToast('⚠️ Error: ' + ex.message); }
 }
