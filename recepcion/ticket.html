@@ -2223,7 +2223,7 @@ async function updateClientQuote(quoteId, btn) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
-            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, actualizamos la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n✅ Revisa y aprueba (o rechaza) el nuevo total en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
+            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, actualizamos la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}${note ? `\n\n📝 *Nota:* ${note}` : ''}\n\n✅ Revisa y aprueba (o rechaza) el nuevo total en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
           })
         });
       } catch (_) { /* no bloquea */ }
@@ -2367,7 +2367,7 @@ async function sendClientQuote(btn) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone,
-            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n${infoLine}\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
+            message: `💰 *Focus Store Soporte*\n\nHola ${cu.full_name}, tu cotización para el Ticket *#${tNum}* está lista.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n${infoLine}${note ? `\n\n📝 *Nota:* ${note}` : ''}\n\n✅ Aprueba o rechaza en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}`
           })
         });
       } catch (_) { /* no bloquea */ }
