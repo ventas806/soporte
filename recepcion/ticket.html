@@ -2043,6 +2043,10 @@ function renderClientQuote() {
   }
   if (q.status === 'pendiente') {
     actionsHtml = `<p style="font-size:12px;color:var(--gold);margin-top:10px">⏳ Esperando respuesta del cliente…</p>`;
+    if (canManage) actionsHtml += `<button class="btn btn-ghost btn-full" style="margin-top:10px;font-size:12px" onclick="editClientQuote()">✏️ Editar cotización</button>`;
+  }
+  if (q.status === 'aprobada' && canManage) {
+    actionsHtml = `<button class="btn btn-ghost btn-full" style="margin-top:12px;font-size:12px" onclick="editClientQuote()">✏️ Editar cotización (trabajo adicional)</button>`;
   }
 
   // Days from tech quote (quoteInternal)
@@ -2073,7 +2077,7 @@ function renderClientQuote() {
 }
 
 /* ── Quote builder form ──────────────────────────────────────── */
-function buildClientQuoteForm(prefill) {
+function buildClientQuoteForm(prefill, editId) {
   buildItems = prefill || [];
   return `
     <div id="cliBuildArea">
@@ -2128,8 +2132,8 @@ function buildClientQuoteForm(prefill) {
         <textarea id="cliQuoteNote" rows="2" placeholder="Notas que verá el cliente en su portal…"></textarea>
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn btn-success btn-full" onclick="sendClientQuote(this)">
-          📤 Enviar cotización al cliente
+        <button class="btn btn-success btn-full" onclick="${editId ? `updateClientQuote('${editId}', this)` : 'sendClientQuote(this)'}">
+          ${editId ? '💾 Guardar cambios' : '📤 Enviar cotización al cliente'}
         </button>
       </div>
     </div>`;
@@ -2139,6 +2143,77 @@ function newClientQuote() {
   const el = document.getElementById('quoteCliBody');
   el.innerHTML = buildClientQuoteForm();
   renderBuildRows();
+}
+
+/* ── Editar cotización del cliente (trabajo adicional / correcciones) ── */
+function editClientQuote() {
+  const q = quoteClient;
+  if (!q) return;
+  const prefill = (q.sp_quote_items || []).map(it => ({
+    desc: it.description, cat: it.item_category || 'servicio',
+    qty: it.quantity, price: it.unit_price, catalogId: it.catalog_item_id || null
+  }));
+  const el = document.getElementById('quoteCliBody');
+  el.innerHTML = buildClientQuoteForm(prefill, q.id);
+  renderBuildRows();
+  // Pre-cargar nota, depósito y crédito guardados en la cotización
+  const noteEl = document.getElementById('cliQuoteNote');
+  if (noteEl) noteEl.value = q.notes || '';
+  const diagFeeEl = document.getElementById('diagFee');
+  if (diagFeeEl && parseFloat(q.diagnosis_fee) > 0) diagFeeEl.value = q.diagnosis_fee;
+  const diagCreditEl = document.getElementById('diagCredit');
+  if (diagCreditEl) diagCreditEl.checked = !!q.diagnosis_credited;
+  recalcBuild();
+}
+
+async function updateClientQuote(quoteId, btn) {
+  if (!buildItems.length) { showToast('⚠️ Agregue al menos una línea'); return; }
+  if (buildItems.some(i => !i.desc.trim() || i.price <= 0)) { showToast('⚠️ Complete todas las líneas (descripción y precio)'); return; }
+  const restore = btnLoad(btn, 'Guardando…');
+
+  const sub        = buildItems.reduce((s, it) => s + (it.qty * it.price), 0);
+  const diagFee    = parseFloat(document.getElementById('diagFee')?.value) || 0;
+  const diagCredit = document.getElementById('diagCredit')?.checked || false;
+  const applyIsv   = document.getElementById('isvCheck')?.checked;
+  const taxRate    = applyIsv ? 0.15 : 0;
+  const taxAmount  = sub * taxRate;
+  const total      = sub + taxAmount - (diagCredit ? diagFee : 0);
+  const note       = document.getElementById('cliQuoteNote')?.value.trim() || null;
+
+  try {
+    const { error: qErr } = await sb.from('sp_repair_quotes').update({
+      subtotal: sub, tax_rate: taxRate, tax_amount: taxAmount, total,
+      diagnosis_fee: diagFee, diagnosis_credited: diagCredit, notes: note
+    }).eq('id', quoteId);
+    if (qErr) throw qErr;
+
+    // Reemplazar líneas
+    await sb.from('sp_quote_items').delete().eq('quote_id', quoteId);
+    await sb.from('sp_quote_items').insert(buildItems.map((it, i) => ({
+      quote_id: quoteId, description: it.desc, item_category: it.cat,
+      quantity: it.qty, unit_price: it.price, total_price: it.qty * it.price,
+      sort_order: i, catalog_item_id: it.catalogId || null
+    })));
+
+    // Notificar al cliente del cambio (opcional)
+    const cu = ticketData?.sp_customers;
+    if (cu?.phone && confirm(`Cotización actualizada. Nuevo total: L. ${fmt(total)}\n\n¿Notificar al cliente del cambio por WhatsApp?`)) {
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
+            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, se actualizó la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💰 Nuevo total a pagar: *L. ${fmt(total)}*\n\nRevisa el detalle en tu portal:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
+          })
+        });
+      } catch (_) { /* no bloquea */ }
+    }
+
+    showToast('✅ Cotización actualizada');
+    setTimeout(() => location.reload(), 900);
+  } catch (ex) { restore?.(); showToast('⚠️ Error: ' + ex.message); }
 }
 
 /* ── Build rows ──────────────────────────────────────────────── */
