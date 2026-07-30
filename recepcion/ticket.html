@@ -2187,7 +2187,7 @@ async function updateClientQuote(quoteId, btn) {
     const { error: qErr } = await sb.from('sp_repair_quotes').update({
       subtotal: sub, tax_rate: taxRate, tax_amount: taxAmount, total,
       diagnosis_fee: diagFee, diagnosis_credited: diagCredit, notes: note,
-      status: 'pendiente', expires_at: expiresAt,
+      status: 'pendiente', expires_at: expiresAt, created_at: new Date().toISOString(),
       approved_at: null, approved_by: null, approved_by_client: null,
       rejected_at: null, rejected_by: null, rejection_reason: null
     }).eq('id', quoteId);
@@ -2203,6 +2203,11 @@ async function updateClientQuote(quoteId, btn) {
 
     // Ticket → esperando_aprobacion (re-aprobación del cliente)
     await sb.from('sp_tickets').update({ status: 'esperando_aprobacion' }).eq('id', ticketId);
+
+    // Reactivar recordatorios de cotización (borrar los ya enviados para este ticket)
+    await sb.from('sp_ticket_alerts').delete()
+      .eq('ticket_id', ticketId)
+      .in('alert_type', ['quote_reminder_24h', 'quote_reminder_72h']);
 
     // Notificar al cliente para que apruebe el nuevo total
     const cu = ticketData?.sp_customers;
