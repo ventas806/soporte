@@ -527,6 +527,7 @@
         <div class="total-row" id="quoteSaldoRow" style="display:none"><span class="label" style="color:var(--orange);font-weight:700">Saldo pendiente</span><span class="amount" id="quoteSaldo" style="color:var(--orange);font-weight:800">—</span></div>
       </div>
       <div id="quoteDaysSection" style="display:none;background:rgba(61,106,255,.08);border:1px solid rgba(61,106,255,.25);border-radius:10px;padding:12px 14px;margin:12px 0"></div>
+      <div id="quoteNote" style="display:none;font-size:13px;color:#e8eaf0;margin:12px 0;padding:10px 12px;background:rgba(255,255,255,.05);border-radius:10px;line-height:1.5;white-space:pre-line"></div>
       <div class="quote-validity" id="quoteValidity"></div>
       <div class="quote-actions" id="quoteActions">
         <button class="btn btn-reject" onclick="openRejectModal()">✗ Rechazar</button>
@@ -873,6 +874,13 @@ function renderQuote(q) {
   } else if (advance > 0) {
     document.getElementById('quoteAdvance').textContent = 'L ' + fmt(advance);
     document.getElementById('quoteAdvanceRow').style.display = '';
+  }
+
+  // Nota para el cliente
+  if (q.notes) {
+    const noteEl = document.getElementById('quoteNote');
+    noteEl.textContent = '📝 ' + q.notes;
+    noteEl.style.display = '';
   }
 
   // Validity
