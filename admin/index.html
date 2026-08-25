@@ -901,7 +901,7 @@ async function loadStaff() {
   try {
     const { data, error } = await sb
       .from('sp_profiles')
-      .select('id, username, full_name, role, color, avatar, is_active, last_login, created_at, app_pin, email, phone')
+      .select('id, username, full_name, role, color, avatar, is_active, last_login, created_at, email, phone')
       .order('full_name');
 
     if (error) throw error;
@@ -1026,7 +1026,7 @@ function openCreate() {
   document.getElementById('fName').value   = '';
   document.getElementById('fUser').value   = '';
   document.getElementById('fRole').value   = '';
-  document.getElementById('fPin').value    = '1234';
+  document.getElementById('fPin').value    = '';
   document.getElementById('fEmail').value  = '';
   document.getElementById('fPhone').value  = '';
   document.getElementById('fieldActive').style.display = 'none';
@@ -1052,7 +1052,8 @@ function openEdit(id) {
   document.getElementById('fName').value   = s.full_name;
   document.getElementById('fUser').value   = s.username;
   document.getElementById('fRole').value   = s.role;
-  document.getElementById('fPin').value    = s.app_pin || '';
+  document.getElementById('fPin').value    = '';
+  document.getElementById('fPin').placeholder = 'Dejar vacío para no cambiar el PIN';
   document.getElementById('fEmail').value  = s.email   || '';
   document.getElementById('fPhone').value  = s.phone   || '';
   document.getElementById('fActive').value = String(s.is_active);
@@ -1094,7 +1095,11 @@ async function saveStaff() {
     showFieldErr('fUser','fUserErr','Solo letras, números, punto, guión'); ok = false;
   }
   if (!role) { showFieldErr('fRole','fRoleErr','Seleccione un rol'); ok = false; }
-  if (!pin || pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin)) {
+  // PIN: obligatorio al crear; al editar puede quedar vacío (= no cambiar).
+  // Por seguridad el PIN actual ya no se muestra ni se puede leer desde el navegador.
+  if (!editingId && !pin) {
+    showFieldErr('fPin','fPinErr','Ingrese un PIN para el nuevo miembro'); ok = false;
+  } else if (pin && (pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin))) {
     showFieldErr('fPin','fPinErr','El PIN debe tener entre 4 y 8 dígitos numéricos'); ok = false;
   }
   if (!ok) return;
@@ -1126,12 +1131,13 @@ async function saveStaff() {
       full_name: name,
       username:  user,
       role:      role,
-      app_pin:   pin,
       avatar:    selectedEmoji,
       color:     selectedColor,
       email:     emailVal || null,
       phone:     phoneVal || null,
     };
+    // Solo cambiar el PIN si se escribió uno (vacío al editar = conservar el actual)
+    if (pin) payload.app_pin = pin;
 
     if (editingId) {
       // Also update is_active

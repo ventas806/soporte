@@ -407,16 +407,17 @@ async function doLogin() {
   btnEl.classList.add('loading');
 
   try {
-    const { data, error } = await sb.from('sp_profiles')
-      .select('id, full_name, username, role, color, avatar, is_active, app_pin')
-      .eq('username', username)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Validación en el servidor: el PIN nunca sale de la base de datos.
+    const { data: res, error } = await sb.rpc('sp_login', {
+      p_username: username, p_pin: pin
+    });
 
     if (error) throw error;
 
-    if (!data || data.app_pin !== pin) {
-      errEl.textContent = 'Usuario o PIN incorrecto.';
+    if (!res?.ok) {
+      errEl.textContent = res?.error === 'bloqueado'
+        ? `🔒 Demasiados intentos. Espere ${res.reintentar_en_min || 15} minuto(s) e intente de nuevo.`
+        : 'Usuario o PIN incorrecto.';
       errEl.classList.add('show');
       document.getElementById('pin').classList.add('error');
       document.getElementById('pin').value = '';
@@ -424,10 +425,7 @@ async function doLogin() {
       return;
     }
 
-    // Update last login
-    await sb.from('sp_profiles')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', data.id);
+    const data = res.profile;
 
     // Store session
     const session = {
