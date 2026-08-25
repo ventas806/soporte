@@ -1806,9 +1806,9 @@ async function assignTech(btn) {
     const updatePayload = { assigned_to: techId };
     if (autoDiag) {
       updatePayload.status = 'en_diagnostico';
-      // Auto-calcular fecha límite de diagnóstico (3 días por defecto)
+      // Auto-calcular fecha límite de diagnóstico (5 días por defecto)
       const diagDeadline = new Date();
-      diagDeadline.setDate(diagDeadline.getDate() + 3);
+      diagDeadline.setDate(diagDeadline.getDate() + 5);
       updatePayload.diagnosis_expected_at              = diagDeadline.toISOString().split('T')[0];
       updatePayload.diagnosis_deadline_warning_sent_at = null;
       updatePayload.last_diagnosis_overdue_alert_at    = null;
@@ -1854,7 +1854,7 @@ async function assignTech(btn) {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: cu.phone,
-              message: `🔍 *Focus Store Soporte*\n\nHola ${cu.full_name}, ¡buenas noticias! Tu equipo *${brand} ${model}* ha sido asignado a nuestro equipo técnico y ya está siendo revisado.\n\n🎫 Ticket: #${tNum}\n\nUna vez finalizado el diagnóstico recibirás una cotización para tu aprobación.\n\n¡Gracias por tu paciencia! 🙏\n*Focus Store Honduras*`
+              message: `🔍 *Focus Store Soporte*\n\nHola ${cu.full_name}, ¡buenas noticias! Tu equipo *${brand} ${model}* ha sido asignado a nuestro equipo técnico y ya está siendo revisado.\n\n🎫 Ticket: #${tNum}\n⏳ El proceso de diagnóstico puede tardar de *3 a 5 días*.\n\nUna vez finalizado el diagnóstico recibirás una cotización para tu aprobación.\n\n¡Gracias por tu paciencia! 🙏\n*Focus Store Honduras*`
             })
           });
         } catch (_) {}
