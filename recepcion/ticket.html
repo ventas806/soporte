@@ -639,6 +639,9 @@
       <!-- ── Card de pago pendiente ────────────────────────── -->
       <div class="card" id="paymentCard" style="display:none;padding:16px"></div>
 
+      <!-- ── Depósito de diagnóstico (editable) ────────────── -->
+      <div class="card" id="depositCard" style="display:none;padding:16px"></div>
+
       <!-- Saldo del cliente (total cotizado vs pagado) -->
       <div class="card" id="balanceCard" style="display:none;padding:16px"></div>
 
@@ -968,6 +971,9 @@ function renderTicket(t, history, msgs, notes) {
   // Card de pago pendiente
   renderPaymentCard(t);
 
+  // Depósito de diagnóstico (editable)
+  renderDepositCard(t);
+
   // Fecha límite de diagnóstico
   renderDiagnosisDeadlineCard(t);
 
@@ -985,6 +991,68 @@ function renderTicket(t, history, msgs, notes) {
 
   // Notes
   renderNotes(notes);
+}
+
+/* ── Depósito de diagnóstico (lo que el cliente dejó al ingresar) ── */
+function renderDepositCard(t) {
+  const el = document.getElementById('depositCard');
+  if (!el || !t) return;
+
+  // Oculto en estados finales sin cobro
+  if (['cancelado','abandonado'].includes(t.status) && !(parseFloat(t.diagnosis_fee) > 0)) {
+    el.style.display = 'none'; return;
+  }
+  el.style.display = 'block';
+
+  const canManage = ['admin','supervisor','recepcion'].includes(session?.role);
+  const fee = parseFloat(t.diagnosis_fee) || 0;
+  const fmtFee = 'L. ' + fee.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+
+  const body = fee > 0
+    ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+         <span style="font-size:18px;font-weight:800;color:var(--green)">${fmtFee}</span>
+         <span style="font-size:12px;color:var(--muted)">Se acredita a la reparación si el cliente aprueba</span>
+       </div>`
+    : `<div style="font-size:13px;color:var(--muted);font-style:italic">Sin depósito registrado</div>`;
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">💰 Depósito de diagnóstico</span>
+      ${canManage ? `<button class="btn btn-ghost" style="font-size:11px;padding:3px 10px" onclick="toggleDepositEdit(true)">${fee > 0 ? '✏️ Editar' : '✏️ Registrar'}</button>` : ''}
+    </div>
+    ${body}
+    ${canManage ? `
+      <div id="depositEditForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Monto que el cliente dejó como depósito:</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="depositInput" min="0" step="0.01" value="${fee > 0 ? fee : ''}" placeholder="0.00" inputmode="decimal"
+            style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px">
+          <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveDeposit(this)">Guardar</button>
+          <button class="btn btn-ghost"   style="padding:7px 12px;font-size:13px" onclick="toggleDepositEdit(false)">Cancelar</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Se usará como crédito en la cotización al cliente.</div>
+      </div>` : ''}`;
+}
+
+function toggleDepositEdit(show) {
+  const f = document.getElementById('depositEditForm');
+  if (f) f.style.display = show ? 'block' : 'none';
+  if (show) document.getElementById('depositInput')?.focus();
+}
+
+async function saveDeposit(btn) {
+  const val = document.getElementById('depositInput')?.value;
+  const fee = parseFloat(val);
+  if (isNaN(fee) || fee < 0) { showToast('⚠️ Ingrese un monto válido'); return; }
+  const restore = btnLoad(btn, 'Guardando…');
+  try {
+    const { error } = await sb.from('sp_tickets')
+      .update({ diagnosis_fee: fee })
+      .eq('id', ticketId);
+    if (error) throw error;
+    showToast('✅ Depósito actualizado');
+    setTimeout(() => location.reload(), 700);
+  } catch (ex) { restore?.(); showToast('⚠️ Error: ' + ex.message); }
 }
 
 /* ── Fecha límite de diagnóstico ────────────────────────────── */
@@ -2201,8 +2269,8 @@ async function updateClientQuote(quoteId, btn) {
       sort_order: i, catalog_item_id: it.catalogId || null
     })));
 
-    // Ticket → esperando_aprobacion (re-aprobación del cliente)
-    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion' }).eq('id', ticketId);
+    // Ticket → esperando_aprobacion (re-aprobación del cliente) + sincronizar depósito
+    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion', diagnosis_fee: diagFee }).eq('id', ticketId);
 
     // Reactivar recordatorios de cotización (borrar los ya enviados para este ticket)
     await sb.from('sp_ticket_alerts').delete()
@@ -2327,8 +2395,8 @@ async function sendClientQuote(btn) {
     const { error: iErr } = await sb.from('sp_quote_items').insert(lineItems);
     if (iErr) throw iErr;
 
-    // Update ticket status → esperando_aprobacion
-    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion' }).eq('id', ticketId);
+    // Update ticket status → esperando_aprobacion (y sincronizar el depósito al ticket)
+    await sb.from('sp_tickets').update({ status: 'esperando_aprobacion', diagnosis_fee: diagFee }).eq('id', ticketId);
 
     // Notify client: quote ready (email + WhatsApp)
     const cu    = ticketData?.sp_customers;
