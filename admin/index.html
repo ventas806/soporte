@@ -766,12 +766,10 @@
       <div class="field">
         <label for="fPin">PIN de acceso *</label>
         <input type="text" id="fPin" class="pin-input"
-               placeholder="1234"
-               maxlength="8"
-               inputmode="numeric"
-               pattern="[0-9]*"
-               oninput="this.value=this.value.replace(/\D/g,'')">
-        <div class="field-hint">4 a 8 dígitos numéricos. El usuario lo usa para ingresar al sistema.</div>
+               placeholder="Mínimo 4 caracteres"
+               maxlength="32"
+               oninput="this.value=this.value.replace(/\s/g,'')">
+        <div class="field-hint">4 a 32 caracteres (letras y/o números, sin espacios). El usuario lo usa para ingresar al sistema.</div>
         <span class="field-error" id="fPinErr">PIN inválido</span>
       </div>
 
@@ -1099,8 +1097,8 @@ async function saveStaff() {
   // Por seguridad el PIN actual ya no se muestra ni se puede leer desde el navegador.
   if (!editingId && !pin) {
     showFieldErr('fPin','fPinErr','Ingrese un PIN para el nuevo miembro'); ok = false;
-  } else if (pin && (pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin))) {
-    showFieldErr('fPin','fPinErr','El PIN debe tener entre 4 y 8 dígitos numéricos'); ok = false;
+  } else if (pin && (pin.length < 4 || pin.length > 32 || /\s/.test(pin))) {
+    showFieldErr('fPin','fPinErr','El PIN debe tener entre 4 y 32 caracteres, sin espacios'); ok = false;
   }
   if (!ok) return;
 
