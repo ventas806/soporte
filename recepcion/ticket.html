@@ -2284,14 +2284,15 @@ async function updateClientQuote(quoteId, btn) {
       const model = ticketData.sp_equipment?.model || '';
       const hasCredit = diagCredit && diagFee > 0;
       const desglose = hasCredit
-        ? `💵 *Cotización:* L. ${fmt(sub + taxAmount)}\n✅ *Crédito por diagnóstico:* L. ${fmt(diagFee)} (se descuenta al aprobar)\n💰 *Total a pagar si apruebas:* L. ${fmt(total)}`
-        : `💰 *Total a pagar:* L. ${fmt(total)}`;
+        ? `💵 *Cotización:* L. ${fmt(sub + taxAmount)}\n✅ *Crédito por diagnóstico:* L. ${fmt(diagFee)} (ya pagado, se descuenta)\n💰 *Costo total de la reparación:* L. ${fmt(total)}`
+        : `💰 *Costo total de la reparación:* L. ${fmt(total)}`;
+      const infoLine = `ℹ️ *No debes pagar el total ahora.* Si apruebas, se te pedirá únicamente un *adelanto (un % del total)* para continuar, y el resto se cancela al entregarte el equipo.`;
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
-            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, actualizamos la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}${note ? `\n\n📝 *Nota:* ${note}` : ''}\n\n✅ Revisa y aprueba (o rechaza) el nuevo total en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
+            message: `📝 *Focus Store Soporte — Cotización actualizada*\n\nHola ${cu.full_name}, actualizamos la cotización de tu *${brand} ${model}* (Ticket *#${ticketData.ticket_number}*) por trabajo adicional detectado durante la reparación.\n\n💻 *Equipo:* ${brand} ${model}\n${desglose}\n\n${infoLine}${note ? `\n\n📝 *Nota:* ${note}` : ''}\n\n✅ Revisa y aprueba (o rechaza) el nuevo total en:\nhttps://soporte.focusstore.net/portal.html?token=${accessToken}\n\n*Focus Store Honduras*`
           })
         });
       } catch (_) { /* no bloquea */ }
@@ -2424,11 +2425,9 @@ async function sendClientQuote(btn) {
       const fmtL      = n => n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
       const hasCredit = diagCredit && diagFee > 0;
       const desglose  = hasCredit
-        ? `💵 *Cotización:* L. ${fmtL(sub + taxAmount)}\n✅ *Crédito por diagnóstico:* L. ${fmtL(diagFee)} (se descuenta al aprobar)\n💰 *Total a pagar si apruebas:* L. ${fmtL(total)}`
-        : `💰 *Total a pagar:* L. ${fmtL(total)}`;
-      const infoLine  = hasCredit
-        ? `ℹ️ El crédito por diagnóstico se descuenta de la cotización solo si apruebas la reparación. Al aprobar se te pedirá un adelanto (%) para iniciar.`
-        : `ℹ️ Si apruebas, cualquier pago que hayas hecho por diagnóstico se acreditará a este total, y se te pedirá un adelanto (%) para iniciar la reparación.`;
+        ? `💵 *Cotización:* L. ${fmtL(sub + taxAmount)}\n✅ *Crédito por diagnóstico:* L. ${fmtL(diagFee)} (ya pagado, se descuenta)\n💰 *Costo total de la reparación:* L. ${fmtL(total)}`
+        : `💰 *Costo total de la reparación:* L. ${fmtL(total)}`;
+      const infoLine  = `ℹ️ *No debes pagar el total ahora.* Si apruebas, se te pedirá únicamente un *adelanto (un % del total)* para iniciar la reparación, y el resto se cancela al entregarte el equipo.${hasCredit ? '' : '\n\nCualquier pago que hayas hecho por diagnóstico se acreditará a este total.'}`;
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: 'POST',
