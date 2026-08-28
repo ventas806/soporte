@@ -939,6 +939,10 @@ function renderTimeline(currentStatus, history) {
   const reachedKeys = new Set(history.map(h => h.to_status));
   reachedKeys.add(currentStatus);
 
+  // La cotización INTERNA del técnico también pone el ticket en 'esperando_aprobacion'.
+  // El cliente no debe ver "Cotización enviada" hasta que exista una cotización PARA ÉL.
+  if (!quoteData) reachedKeys.delete('esperando_aprobacion');
+
   // Find current stage index
   let currentIdx = -1;
   stages.forEach((s, i) => { if (s.key === currentStatus) currentIdx = i; });
@@ -953,7 +957,7 @@ function renderTimeline(currentStatus, history) {
 
     // Find date from history
     const histEntry = history.find(h => h.to_status === s.key);
-    const dateStr   = histEntry ? fmtDateShort(histEntry.created_at) : '';
+    const dateStr   = (histEntry && (isDone || isCurrent)) ? fmtDateShort(histEntry.created_at) : '';
 
     return `
       <div class="tl-item">
