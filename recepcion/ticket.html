@@ -2459,16 +2459,15 @@ async function approveInternalQuote(qId) {
     const totalDays = quoteInternal
       ? (quoteInternal.repair_days || 0) + (quoteInternal.parts_days || 0) + (quoteInternal.testing_days || 0)
       : 0;
-    if (quoteInternal) {
-      if (totalDays > 0) {
-        const deadline = new Date();
-        deadline.setDate(deadline.getDate() + totalDays);
-        const deadlineStr = deadline.toISOString().split('T')[0]; // YYYY-MM-DD
-        await sb.from('sp_tickets').update({
-          repair_expected_at: deadlineStr,
-          deadline_warning_sent_at: null  // resetear para que dispare el aviso cuando corresponda
-        }).eq('id', ticketId);
-      }
+    let deadlineStr = null;
+    if (quoteInternal && totalDays > 0) {
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + totalDays);
+      deadlineStr = deadline.toISOString().split('T')[0]; // YYYY-MM-DD
+      await sb.from('sp_tickets').update({
+        repair_expected_at: deadlineStr,
+        deadline_warning_sent_at: null  // resetear para que dispare el aviso cuando corresponda
+      }).eq('id', ticketId);
     }
 
     // Notificar al técnico que su cotización fue aprobada por el admin
@@ -2499,7 +2498,49 @@ async function approveInternalQuote(qId) {
       }
     }
 
-    showToast('✅ Cotización aprobada — técnico notificado');
+    // Notificar al CLIENTE: pago procesado + tiempos estimados + reparación en marcha.
+    // Solo si el pago YA fue confirmado — aprobar la interna antes del pago no debe
+    // avisarle al cliente que "su pago se procesó".
+    let clienteNotificado = false;
+    const pagoConfirmado = ['aprobado_reparacion','en_reparacion'].includes(ticketData?.status);
+    const cu = ticketData?.sp_customers;
+    if (pagoConfirmado && cu?.phone) {
+      const brand = ticketData.sp_equipment?.brand || '';
+      const model = ticketData.sp_equipment?.model || '';
+      const tNum  = ticketData.ticket_number;
+      const { saldo } = getClientBalance();
+      const fmtL = n => n.toLocaleString('es-HN', { minimumFractionDigits: 2 });
+
+      const dias = [];
+      if ((quoteInternal?.repair_days  || 0) > 0) dias.push(`🔧 Reparación: *${quoteInternal.repair_days} día(s)*`);
+      if ((quoteInternal?.parts_days   || 0) > 0) dias.push(`📦 Repuesto: *${quoteInternal.parts_days} día(s)*`);
+      if ((quoteInternal?.testing_days || 0) > 0) dias.push(`🧪 Pruebas: *${quoteInternal.testing_days} día(s)*`);
+      const entregaStr = deadlineStr
+        ? new Date(deadlineStr + 'T12:00:00').toLocaleDateString('es-HN', { day:'numeric', month:'long', year:'numeric' })
+        : null;
+      const bloqueDias = dias.length
+        ? `\n\n⏱️ *Tiempo estimado de trabajo:*\n${dias.join('\n')}${entregaStr ? `\n\n📅 *Entrega estimada: ${entregaStr}*` : ''}`
+        : '';
+      const saldoLine = saldo > 0
+        ? `\n\n💰 Saldo pendiente: *L. ${fmtL(saldo)}* (se cancela al recoger el equipo)`
+        : '';
+      const portal = `https://soporte.focusstore.net/portal.html?token=${encodeURIComponent(ticketData?.access_token || '')}`;
+
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone, ticket_id: ticketId, recipient_type: 'client',
+            message: `🔧 *Focus Store — ¡Tu reparación ha comenzado!*\n\nHola ${cu.full_name}, tu pago fue procesado correctamente y tu *${brand} ${model}* ya está en manos de nuestro técnico.\n\n🎫 Ticket: #${tNum}${bloqueDias}${saldoLine}\n\nTe avisaremos apenas esté listo para retiro. 🙏\n\n📋 Ver tu ticket:\n${portal}\n*Focus Store Honduras*`
+          })
+        });
+        clienteNotificado = true;
+      } catch(_) { /* no bloquea */ }
+    }
+
+    showToast(clienteNotificado
+      ? '✅ Cotización aprobada — técnico y cliente notificados'
+      : '✅ Cotización aprobada — técnico notificado');
     setTimeout(() => location.reload(), 800);
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
