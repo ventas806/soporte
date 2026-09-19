@@ -543,19 +543,73 @@ function renderNotes(ticketId, notes) {
 
 /* ── Actions ────────────────────────────────────────────────── */
 /* ── Saldo pendiente del cliente (total cotizado − pagado) ────── */
-async function getSaldoLine(ticketId, paid) {
+const fmtL = n => 'L. ' + (parseFloat(n) || 0).toLocaleString('es-HN', { minimumFractionDigits: 2 });
+
+/* Trae la cotización al cliente y calcula el desglose completo del saldo. */
+async function getBalanceDetail(ticketId, paid) {
   try {
     const { data: q } = await sb.from('sp_repair_quotes')
-      .select('total,status')
+      .select('subtotal,tax_amount,total,diagnosis_fee,diagnosis_credited,status')
       .eq('ticket_id', ticketId)
       .eq('quote_type', 'cliente')
       .in('status', ['enviada', 'aprobada'])
       .limit(1);
-    const total = q?.[0] ? parseFloat(q[0].total || 0) : 0;
-    const saldo = Math.max(0, total - parseFloat(paid || 0));
-    if (saldo > 0) return `\n💰 Saldo pendiente: *L. ${saldo.toLocaleString('es-HN',{minimumFractionDigits:2})}* — se cancela al recoger el equipo.\n`;
-  } catch(_) {}
+    if (!q?.[0]) return null;
+    const total   = parseFloat(q[0].total || 0);
+    const bruto   = parseFloat(q[0].subtotal || 0) + parseFloat(q[0].tax_amount || 0);
+    const credito = (q[0].diagnosis_credited && parseFloat(q[0].diagnosis_fee) > 0) ? parseFloat(q[0].diagnosis_fee) : 0;
+    const pagado  = parseFloat(paid || 0);
+    return { total, bruto, credito, pagado, saldo: Math.max(0, total - pagado) };
+  } catch(_) { return null; }
+}
+
+/* Línea corta para el cliente (solo el saldo). */
+async function getSaldoLine(ticketId, paid) {
+  const b = await getBalanceDetail(ticketId, paid);
+  if (b && b.saldo > 0) return `\n💰 Saldo pendiente: *${fmtL(b.saldo)}* — se cancela al recoger el equipo.\n`;
   return '';
+}
+
+/* Desglose detallado para el administrador. */
+function buildAdminBalanceBlock(b) {
+  if (!b || b.total <= 0) return '';
+  const lines = ['', '💵 *Detalle de saldo*'];
+  if (b.credito > 0) {
+    lines.push(`• Cotización: ${fmtL(b.bruto)}`);
+    lines.push(`• Crédito diagnóstico: -${fmtL(b.credito)}`);
+  }
+  lines.push(`• Total cotizado: ${fmtL(b.total)}`);
+  lines.push(`• Abonado: -${fmtL(b.pagado)}`);
+  lines.push(b.saldo > 0
+    ? `• *Saldo pendiente: ${fmtL(b.saldo)}*`
+    : `• ✅ *Sin saldo pendiente*`);
+  return '\n' + lines.join('\n') + '\n';
+}
+
+/* Envía un WhatsApp a Billy + demás admins/supervisores. Nunca bloquea el flujo. */
+async function notifyAdmins(message) {
+  const MAIN = '50432876364';
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: MAIN, message })
+    });
+  } catch(_) {}
+  try {
+    const { data: admins } = await sb.from('sp_profiles')
+      .select('phone')
+      .in('role', ['admin', 'supervisor']);
+    for (const admin of admins || []) {
+      if (admin.phone && admin.phone.replace(/\D/g,'') !== MAIN) {
+        try {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: admin.phone, message })
+          });
+        } catch(_) {}
+      }
+    }
+  } catch(_) {}
 }
 
 async function changeStatus(ticketId, currentStatus) {
@@ -566,20 +620,24 @@ async function changeStatus(ticketId, currentStatus) {
     const { error } = await sb.from('sp_tickets').update({ status: newStatus }).eq('id', ticketId);
     if (error) throw error;
 
+    const t = allTickets.find(x => x.id === ticketId);
+    const { data: tkt } = await sb.from('sp_tickets')
+      .select('access_token, paid_amount, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+      .eq('id', ticketId).single();
+    const balance = await getBalanceDetail(ticketId, tkt?.paid_amount);
+
     // Notificar al cliente si el equipo quedó listo para entrega
     // (el override manual saltaba esta notificación — el cliente nunca se enteraba)
     let notified = false;
     if (newStatus === 'listo_para_entrega') {
-      const t = allTickets.find(x => x.id === ticketId);
-      const { data: tkt } = await sb.from('sp_tickets')
-        .select('access_token, paid_amount, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
-        .eq('id', ticketId).single();
       const cu    = tkt?.sp_customers;
       const token = tkt?.access_token;
       const brand = t?.brand || '';
       const model = t?.model || '';
       const equip = `${brand} ${model}`.trim();
-      const saldoLine = await getSaldoLine(ticketId, tkt?.paid_amount);
+      const saldoLine = (balance && balance.saldo > 0)
+        ? `\n💰 Saldo pendiente: *${fmtL(balance.saldo)}* — se cancela al recoger el equipo.\n`
+        : '';
 
       if (cu?.email && token) {
         try {
@@ -608,6 +666,16 @@ async function changeStatus(ticketId, currentStatus) {
         } catch(_) {}
       }
     }
+
+    // Avisar a los admins de cualquier cambio manual de estado, con el desglose del saldo
+    try {
+      const label     = TECH_STATUSES.find(s => s.v === newStatus)?.l || newStatus;
+      const techName  = session.full_name || 'Técnico';
+      const ticketURL = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticketId}`;
+      const equipo    = `${t?.brand || ''} ${t?.model || ''}`.trim();
+      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t?.ticket_number || ''}*\n\n👨‍🔧 ${techName} movió el ticket a *${label}*.\n\n🖥️ Equipo: ${equipo}\n${buildAdminBalanceBlock(balance)}\n🔗 ${ticketURL}`;
+      await notifyAdmins(adminMsg);
+    } catch(_) { /* no bloquea */ }
 
     showToast(notified ? '✅ Estado actualizado — cliente notificado' : '✅ Estado actualizado');
     setTimeout(() => loadTickets(), 800);
@@ -1104,7 +1172,10 @@ async function confirmActModal() {
     const token = tkt?.access_token;
     const brand = t.brand || '';
     const model = t.model || '';
-    const saldoLine = action === 'ready' ? await getSaldoLine(ticketId, tkt?.paid_amount) : '';
+    const balance   = await getBalanceDetail(ticketId, tkt?.paid_amount);
+    const saldoLine = (action === 'ready' && balance && balance.saldo > 0)
+      ? `\n💰 Saldo pendiente: *${fmtL(balance.saldo)}* — se cancela al recoger el equipo.\n`
+      : '';
 
     // Email al cliente
     if (cu?.email && token) {
@@ -1146,30 +1217,9 @@ async function confirmActModal() {
       const techName  = session.full_name || 'Técnico';
       const ticketURL = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticketId}`;
       const estLine   = days > 0 ? `\n⏳ Tiempo estimado: *${days} día(s)*\n📅 Fecha estimada: *${dateStr}*` : '';
-      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t.ticket_number}*\n\n👨‍🔧 ${techName} movió el ticket a *${statusLabels[action]}*.\n\n🖥️ Equipo: ${brand} ${model}${estLine}\n\n🔗 ${ticketURL}`;
-
-      // Siempre notificar al admin principal
-      try {
-        await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: '50432876364', message: adminMsg })
-        });
-      } catch(_) {}
-
-      // Otros admins/supervisores con teléfono distinto
-      const { data: admins } = await sb.from('sp_profiles')
-        .select('phone')
-        .in('role', ['admin', 'supervisor']);
-      for (const admin of admins || []) {
-        if (admin.phone && admin.phone.replace(/\D/g,'') !== '50432876364') {
-          try {
-            await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: admin.phone, message: adminMsg })
-            });
-          } catch(_) {}
-        }
-      }
+      const saldoBlock = buildAdminBalanceBlock(balance);
+      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t.ticket_number}*\n\n👨‍🔧 ${techName} movió el ticket a *${statusLabels[action]}*.\n\n🖥️ Equipo: ${brand} ${model}${estLine}\n${saldoBlock}\n🔗 ${ticketURL}`;
+      await notifyAdmins(adminMsg);
     } catch(_) { /* no bloquea */ }
 
     showToast('✅ Estado actualizado — cliente notificado');
