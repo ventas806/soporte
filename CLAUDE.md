@@ -34,9 +34,14 @@ prevalece la documentación de Obsidian.
 ## Infraestructura
 
 - **Supabase:** `uzhjnedhmbvgfqqssuov` — tablas con prefijo `sp_`
-- **WhatsApp:** UltraMsg instance178325 / token: zm383lcp9w2xv11q — parámetro `message` (NO `body`)
-- **Email:** Gmail SMTP — ventas@focusstore.net / swtxegdmjlpsxpaf
+- **WhatsApp:** UltraMsg instance178325 — parámetro `message` (NO `body`)
+- **Email:** Gmail SMTP — ventas@focusstore.net
 - **Dominio:** soporte.focusstore.net → CNAME → ventas806.github.io
+
+> ⚠️ **Este repositorio es PÚBLICO.** Ninguna credencial va en el código ni en
+> este archivo. Los tokens viven en los secrets de las Edge Functions:
+> `ULTRAMSG_MAIN_TOKEN` y `GMAIL_APP_PASSWORD`. Se consultan y editan en
+> Supabase → Edge Functions → Secrets.
 
 ## Edge Functions (versiones actuales)
 
