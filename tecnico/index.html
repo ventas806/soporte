@@ -612,10 +612,65 @@ async function notifyAdmins(message) {
   } catch(_) {}
 }
 
+/* ── Motivo obligatorio al marcar irreparable ────────────────── */
+const MOTIVO_MIN = 20;
+
+function openIrreparableModal(ticketId) {
+  const t = allTickets.find(x => x.id === ticketId);
+  document.getElementById('irrEquipo').textContent = `${t?.brand || ''} ${t?.model || ''}`.trim() || 'este equipo';
+  document.getElementById('irrTicket').textContent = `#${t?.ticket_number || ''}`;
+  const ta = document.getElementById('irrMotivo');
+  ta.value = '';
+  ta.dataset.ticketId = ticketId;
+  updateIrrCounter();
+  document.getElementById('irrOverlay').style.display = 'flex';
+  ta.focus();
+}
+
+function closeIrreparableModal() {
+  document.getElementById('irrOverlay').style.display = 'none';
+}
+
+function updateIrrCounter() {
+  const len  = document.getElementById('irrMotivo').value.trim().length;
+  const el   = document.getElementById('irrCounter');
+  const btn  = document.getElementById('irrConfirmBtn');
+  const falta = MOTIVO_MIN - len;
+  if (falta > 0) {
+    el.textContent = `Faltan ${falta} caracteres`;
+    el.style.color = 'var(--muted)';
+    btn.disabled = true;
+    btn.style.opacity = '.45';
+    btn.style.cursor = 'not-allowed';
+  } else {
+    el.textContent = `${len} caracteres ✓`;
+    el.style.color = 'var(--green)';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  }
+}
+
+async function confirmIrreparable() {
+  const ta       = document.getElementById('irrMotivo');
+  const motivo   = ta.value.trim();
+  const ticketId = ta.dataset.ticketId;
+  if (motivo.length < MOTIVO_MIN) { showToast(`⚠️ Explique el motivo (mínimo ${MOTIVO_MIN} caracteres).`); return; }
+  closeIrreparableModal();
+  await applyStatusChange(ticketId, 'irreparable', motivo);
+}
+
 async function changeStatus(ticketId, currentStatus) {
   const newStatus = document.getElementById(`st-${ticketId}`).value;
   if (!newStatus || newStatus === currentStatus) { showToast('⚠️ Seleccione un estado diferente.'); return; }
 
+  // Irreparable exige motivo escrito: se guarda y se le manda al cliente.
+  if (newStatus === 'irreparable') { openIrreparableModal(ticketId); return; }
+
+  await applyStatusChange(ticketId, newStatus, null);
+}
+
+async function applyStatusChange(ticketId, newStatus, motivo) {
   try {
     const { error } = await sb.from('sp_tickets').update({ status: newStatus }).eq('id', ticketId);
     if (error) throw error;
@@ -676,12 +731,30 @@ async function changeStatus(ticketId, currentStatus) {
       const model = t?.model || '';
       const tNum  = t?.ticket_number || '';
       const politicas = `\n\n📌 *Políticas de retiro:*\n• 15 días de almacenamiento gratuito\n• Después aplican cargos diarios\n• A los 60 días se declara abandonado`;
+      const motivoLine = motivo ? `\n\n🔎 *Motivo:*\n${motivo}` : '';
+
+      // Dejar el diagnóstico guardado antes de avisar (queda como respaldo de lo que se le dijo)
+      if (motivo) {
+        try {
+          await sb.from('sp_repair_diagnostics').insert({
+            ticket_id: ticketId, technician_id: session.id,
+            diagnosis: motivo, is_repairable: false
+          });
+        } catch(_) {}
+        try {
+          await sb.from('sp_ticket_internal_notes').insert({
+            ticket_id: ticketId, note_type: 'tecnico', author_id: session.id,
+            content: `⛔ Equipo declarado NO REPARABLE.\nMotivo enviado al cliente: ${motivo}`
+          });
+        } catch(_) {}
+      }
+
       if (cu?.phone) {
         try {
           await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: cu.phone,
-              message: `⛔ *Focus Store Soporte*\n\nHola ${cu.full_name}, lamentamos informarte que tras el diagnóstico de tu equipo *${brand} ${model}*, nuestro equipo técnico determinó que no tiene reparación posible.\n\n🎫 Ticket: #${tNum}\n\nPuedes pasar a recoger tu equipo en nuestra tienda cuando gustes.${politicas}\n\n📍 *Focus Store Honduras*\nGracias por tu comprensión.` })
+              message: `⛔ *Focus Store Soporte*\n\nHola ${cu.full_name}, lamentamos informarte que tras el diagnóstico de tu equipo *${brand} ${model}*, nuestro equipo técnico determinó que no tiene reparación posible.\n\n🎫 Ticket: #${tNum}${motivoLine}\n\nPuedes pasar a recoger tu equipo en nuestra tienda cuando gustes.${politicas}\n\n📍 *Focus Store Honduras*\nGracias por tu comprensión.` })
           });
           notified = true;
         } catch(_) {}
@@ -692,7 +765,8 @@ async function changeStatus(ticketId, currentStatus) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 'irreparable', clientName: cu.full_name,
               clientEmail: cu.email, ticketNumber: tNum,
-              deviceBrand: brand, deviceModel: model, portalToken: token })
+              deviceBrand: brand, deviceModel: model, portalToken: token,
+              reason: motivo || '' })
           });
           notified = true;
         } catch(_) {}
@@ -705,7 +779,8 @@ async function changeStatus(ticketId, currentStatus) {
       const techName  = session.full_name || 'Técnico';
       const ticketURL = `https://soporte.focusstore.net/recepcion/ticket.html?id=${ticketId}`;
       const equipo    = `${t?.brand || ''} ${t?.model || ''}`.trim();
-      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t?.ticket_number || ''}*\n\n👨‍🔧 ${techName} movió el ticket a *${label}*.\n\n🖥️ Equipo: ${equipo}\n${buildAdminBalanceBlock(balance)}\n🔗 ${ticketURL}`;
+      const motivoAdm = motivo ? `\n\n🔎 *Motivo (enviado al cliente):*\n${motivo}` : '';
+      const adminMsg  = `🔔 *Cambio de estado — Ticket #${t?.ticket_number || ''}*\n\n👨‍🔧 ${techName} movió el ticket a *${label}*.\n\n🖥️ Equipo: ${equipo}${motivoAdm}\n${buildAdminBalanceBlock(balance)}\n🔗 ${ticketURL}`;
       await notifyAdmins(adminMsg);
     } catch(_) { /* no bloquea */ }
 
@@ -1289,6 +1364,33 @@ window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn-sm btn-ghost" style="flex:1" onclick="closeActModal()">Cancelar</button>
       <button class="btn-sm" id="actModalConfirmBtn" style="flex:1" onclick="confirmActModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: motivo obligatorio al declarar irreparable ────── -->
+<div id="irrOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:460px;max-width:92vw">
+    <h3 style="font-size:17px;margin-bottom:6px">⛔ Declarar equipo no reparable</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      <span id="irrTicket" style="font-weight:700"></span> · <span id="irrEquipo"></span>
+    </p>
+    <div style="background:rgba(255,193,0,.08);border:1px solid rgba(255,193,0,.3);border-radius:10px;padding:10px 12px;margin-bottom:14px">
+      <p style="font-size:11.5px;line-height:1.5;color:var(--text);margin:0">
+        📤 Lo que escriba aquí <b>se le envía al cliente por WhatsApp y correo</b>, y queda guardado en el ticket.
+        Explique en términos claros por qué no tiene reparación.
+      </p>
+    </div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Motivo técnico *</label>
+    <textarea id="irrMotivo" rows="4" oninput="updateIrrCounter()"
+      placeholder="Ej: La celda interna está hinchada y el circuito de protección quemado. Repararla es inseguro y el repuesto original ya está descontinuado."
+      style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13.5px;line-height:1.5;padding:12px;margin-top:8px;outline:none;font-family:inherit;resize:vertical"></textarea>
+    <div id="irrCounter" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn-sm btn-ghost" style="flex:1" onclick="closeIrreparableModal()">Cancelar</button>
+      <button class="btn-sm btn-primary" id="irrConfirmBtn" style="flex:1.4" onclick="confirmIrreparable()">
+        Guardar y notificar al cliente
+      </button>
     </div>
   </div>
 </div>
