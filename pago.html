@@ -9,7 +9,9 @@
      Tilopay redirige con GET: ?code=1&description=...&order=WA-0009&auth=...&tpt=...
      code=1 → aprobado; otro → rechazado. Solo muestra estado: la confirmación REAL del
      pedido la hace el backend (cron + /consult). Vive aquí (GitHub Pages) porque Supabase
-     bloquea servir HTML desde *.supabase.co (anti-phishing). -->
+     bloquea servir HTML desde *.supabase.co (anti-phishing).
+     2026-09-30: el boton apuntaba al numero del bot 8832-2245, bloqueado por WhatsApp el 18-jul
+     (instancia UltraMsg cancelada el 27-jul); ahora va a la linea principal 3287-6364. -->
 <style>
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1220;font-family:'Segoe UI',Arial,sans-serif}
   .card{max-width:420px;margin:24px;background:#fff;border-radius:16px;padding:36px 32px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.4)}
@@ -26,7 +28,7 @@
     <div class="icono" id="icono">⏳</div>
     <h1 id="titulo">Verificando el pago…</h1>
     <p class="detalle" id="detalle"></p>
-    <a class="wa" href="https://wa.me/50488322245">💬 Volver al chat de WhatsApp</a>
+    <a class="wa" href="https://wa.me/50432876364">💬 Escribinos por WhatsApp</a>
     <p class="cierre" id="cierre"></p>
     <p class="pie">Focus Store · Pago procesado por Tilopay</p>
   </div>
