@@ -72,7 +72,8 @@
       gap: 16px;
     }
     @media (max-width: 720px) {
-      .page { grid-template-columns: 1fr; }
+      /* minmax(0,1fr): '1fr' solo no deja que la columna sea más angosta que su contenido */
+      .page { grid-template-columns: minmax(0, 1fr); padding: 14px 10px; }
     }
 
     /* ── Card ───────────────────────────────────────────────── */
@@ -319,6 +320,16 @@
     .qi-total-row { display:flex; justify-content:space-between; font-size:13px;
       color:var(--muted); padding:3px 0; }
     .qi-total-row.main { font-size:16px; font-weight:800; color:var(--text); padding-top:6px; }
+
+    /* Celular: tablas de cotización compactas para que la columna Total no quede cortada.
+       Va DESPUÉS de las reglas de arriba para ganarles (mismo peso de selector). */
+    @media (max-width: 720px) {
+      .qi-table { font-size: 12px; }
+      .qi-table thead th { padding: 6px 4px; font-size: 9.5px; }
+      .qi-table tbody td { padding: 7px 4px; }
+      .qi-desc { min-width: 0; word-break: break-word; }
+      .qi-num  { font-size: 11.5px; }
+    }
     .qi-total-row.main .mono { color:var(--green); }
 
     /* Line item builder (editable) */
@@ -413,6 +424,9 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
   </style>
+  <!-- Vista celular compartida (va después del CSS de la página) -->
+  <link rel="stylesheet" href="../assets/movil.css?v=1">
+  <script src="../assets/movil.js?v=1" defer></script>
 </head>
 <body>
 

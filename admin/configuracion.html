@@ -202,11 +202,14 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-    @media (max-width: 760px) {
-      .sidebar { display: none; }
+    @media (max-width: 768px) {   /* mismo corte que assets/movil.css (cajón del menú) */
       .main { margin-left: 0; }
+      .add-row input { min-width: 0; flex: 1; }   /* el campo empujaba el botón "Agregar" fuera de la pantalla */
     }
   </style>
+  <!-- Vista celular compartida (va después del CSS de la página) -->
+  <link rel="stylesheet" href="../assets/movil.css?v=1">
+  <script src="../assets/movil.js?v=1" defer></script>
 </head>
 <body>
 

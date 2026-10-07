@@ -393,10 +393,17 @@
       .sidebar-overlay.show { display: block; }
       .main { margin-left: 0; }
       .hamburger { display: block; }
+      /* Celular: n° de ticket a la izquierda; cliente/equipo y estado apilados a la derecha.
+         minmax(0,1fr) deja que el nombre largo se corte con '…' en vez de empujar la fila */
       .tkt-row {
-        grid-template-columns: 90px 1fr 110px;
+        grid-template-columns: 78px minmax(0, 1fr);
         grid-template-rows: auto auto;
+        gap: 6px 10px;
+        padding: 12px;
       }
+      .tkt-num { grid-row: 1 / span 2; align-self: start; font-size: 11px; }
+      .tkt-info { min-width: 0; }
+      .tkt-row > :nth-child(3) { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
       .tkt-tech, .tkt-days { display: none; }
       .table-header { display: none; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -421,6 +428,9 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
   </style>
+  <!-- Vista celular compartida (va después del CSS de la página) -->
+  <link rel="stylesheet" href="../assets/movil.css?v=1">
+  <script src="../assets/movil.js?v=1" defer></script>
 </head>
 <body>
 

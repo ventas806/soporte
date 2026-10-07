@@ -1,0 +1,54 @@
+/* ─────────────────────────────────────────────────────────────
+   Vista celular — reglas compartidas por todo el sistema de soporte.
+   Se carga DESPUÉS del <style> de cada página, así que estas reglas
+   ganan sobre las de la página cuando la pantalla es angosta.
+   Lo específico de una sola página va en el @media de esa página.
+   ───────────────────────────────────────────────────────────── */
+
+.movil-burger { display: none; }
+.movil-overlay { display: none; }
+
+@media (max-width: 768px) {
+
+  /* El iPhone hace zoom solo al tocar un campo con letra menor a 16px */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  select,
+  textarea { font-size: 16px !important; }
+
+  /* Solo el contenedor que va junto al menú lateral (en el ticket hay otra .main: la fila del TOTAL).
+     El contenedor principal se estiraba al ancho de su contenido
+     (flex/grid con min-width:auto) y empujaba todo fuera de la pantalla */
+  .sidebar ~ .main { margin-left: 0 !important; min-width: 0; width: 100%; max-width: 100vw; }
+
+  /* Menú lateral como cajón que se abre con ☰ */
+  .sidebar {
+    display: flex !important;
+    position: fixed !important;
+    top: 0; bottom: 0; left: 0;
+    z-index: 1000 !important;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .sidebar.open,
+  .sidebar.movil-open { transform: translateX(0); box-shadow: 0 0 40px rgba(0, 0, 0, .55); }
+  .movil-overlay.show {
+    display: block; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0, 0, 0, .55);
+  }
+  .movil-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border, #2a2f3f); border-radius: 10px;
+    color: var(--text, #e8eaf0); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+
+  /* Barra superior: que sus botones bajen de línea en vez de salirse */
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 12px 14px !important; }
+  .topbar h1, .topbar h2 { font-size: 16px; }
+
+  /* Tablas anchas: se deslizan dentro de su propia caja, no toda la página */
+  .sidebar ~ .main table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Modales: que no se pasen del alto/ancho de la pantalla */
+  .modal, .modal-box, .modal-content { max-width: 94vw !important; max-height: 90vh; overflow-y: auto; }
+}
