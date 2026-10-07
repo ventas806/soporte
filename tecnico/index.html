@@ -137,6 +137,22 @@
     .next-step-blue   { background:rgba(61,106,255,.08);  border:1px solid rgba(61,106,255,.25); }
     .next-step-green  { background:rgba(46,213,115,.07);  border:1px solid rgba(46,213,115,.25); }
     .next-step-purple { background:rgba(162,155,254,.07); border:1px solid rgba(162,155,254,.25); }
+    .next-step-red    { background:rgba(255,71,87,.08);   border:1px solid rgba(255,71,87,.35); }
+    .next-step-red .next-step-lbl { color:var(--red); }
+    .next-step-red p { font-size:12.5px; line-height:1.5; margin:0; }
+    .btn-action-red { background:var(--red); color:#fff; border:none; font-weight:700; }
+    .dl-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      font-size:12px; color:var(--muted); background:var(--bg3); border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+    .dl-row b { color:var(--text); }
+    .dl-chip { display:inline-block; margin-top:4px; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:6px;
+      background:rgba(136,146,164,.12); color:var(--muted); white-space:nowrap; }
+    .dl-chip.late { background:rgba(255,71,87,.15); color:var(--red); }
+    #delayBanner { display:none; background:rgba(255,71,87,.08); border:1px solid rgba(255,71,87,.35);
+      border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+    #delayBanner h4 { font-size:14px; color:var(--red); margin:0 0 4px; }
+    #delayBanner p { font-size:12.5px; color:var(--muted); margin:0 0 10px; }
+    #delayBanner .db-list { display:flex; flex-wrap:wrap; gap:8px; }
+    #delayBanner .db-list button { white-space:normal; text-align:left; max-width:100%; line-height:1.35; }
 
     textarea.sm {
       width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px;
@@ -273,6 +289,9 @@
     </select>
   </div>
 
+  <!-- Aviso de tickets atrasados del técnico -->
+  <div id="delayBanner"></div>
+
   <!-- Ticket list -->
   <div id="ticketList">
     <div class="empty">
@@ -339,6 +358,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('userName').textContent = session.full_name.split(' ')[0];
 
   await loadTickets();
+
+  // El aviso de atraso por WhatsApp trae ?atraso=<id>: abrir directo el formulario
+  const atrasoId = new URLSearchParams(location.search).get('atraso');
+  if (atrasoId && allTickets.some(t => t.id === atrasoId)) openDelayModal(atrasoId);
 });
 
 function getSession() {
@@ -366,6 +389,7 @@ async function loadTickets() {
 
     updateStats();
     applyFilter();
+    renderDelayBanner();
 
   } catch (ex) {
     console.error(ex);
@@ -430,6 +454,25 @@ function renderTickets(tickets) {
       `<option value="${s.v}" ${s.v === t.status ? 'selected' : ''}>${s.l}</option>`
     ).join('');
 
+    // Plazo de entrega al cliente y atraso (solo en los estados donde corre el plazo)
+    const deadline = DELAY_STATUSES.includes(t.status) ? t.repair_expected_at : null;
+    const atraso   = daysOverdue(t);
+    const dlChip   = !deadline ? ''
+      : atraso > 0 ? `<br><span class="dl-chip late">🔴 ${atraso}d atrasado</span>`
+      : `<br><span class="dl-chip">📅 ${fmtFecha(deadline, 'medium')}</span>`;
+    const dlBlock  = !DELAY_STATUSES.includes(t.status) ? ''
+      : atraso > 0 ? `
+        <div class="next-step next-step-red">
+          <div class="next-step-lbl">🔴 Atrasado ${atraso} día(s) — ¿qué está pasando?</div>
+          <p>Debía entregarse al cliente el <b>${fmtFecha(deadline)}</b>. Cuéntanos el motivo y cuántos días más necesitas: el cliente recibe la nueva fecha y dejan de llegarte los recordatorios.</p>
+          <button class="btn-sm btn-action-red" onclick="openDelayModal('${t.id}')">📝 Reportar atraso y nueva fecha</button>
+        </div>`
+      : `
+        <div class="dl-row">
+          <span>📅 Entrega al cliente: <b>${deadline ? fmtFecha(deadline) : 'sin fecha'}</b></span>
+          <button class="btn-sm btn-ghost" onclick="openDelayModal('${t.id}')">⏱️ Reportar atraso</button>
+        </div>`;
+
     return `
     <div class="ticket-card" id="tc-${t.id}">
       <div class="tc-header" onclick="toggleCard('${t.id}')">
@@ -438,7 +481,7 @@ function renderTickets(tickets) {
           <h4>${CAT_ICONS[t.category]||'🔧'} ${t.brand} ${t.model}</h4>
           <p>${t.category || '—'} ${t.serial_number ? '· SN: ' + t.serial_number : ''}</p>
         </div>
-        <div class="tc-status"><span class="chip ${st.chip}">${st.label}</span></div>
+        <div class="tc-status"><span class="chip ${st.chip}">${st.label}</span>${dlChip}</div>
         <div class="tc-days ${dc}">${days}d</div>
         <div class="tc-expand">▼</div>
       </div>
@@ -460,6 +503,9 @@ function renderTickets(tickets) {
           ${esc(t.reported_fault)}
         </div>
         ${t.client_notes ? `<div class="fault-box" style="border-left:3px solid var(--accent)"><div class="lbl">Notas del cliente</div>${esc(t.client_notes)}</div>` : ''}
+
+        <!-- Plazo de entrega / atraso -->
+        ${dlBlock}
 
         <!-- Next-step action buttons -->
         ${t.status === 'aprobado_reparacion' ? `
@@ -610,6 +656,228 @@ async function notifyAdmins(message) {
       }
     }
   } catch(_) {}
+}
+
+/* ── Plazos de entrega y reporte de atraso ───────────────────── */
+// Estados donde corre el plazo de entrega al cliente (igual que el cron de atrasos)
+const DELAY_STATUSES = ['aprobado_reparacion', 'en_reparacion', 'esperando_repuesto', 'en_pruebas'];
+const DELAY_DETALLE_MIN = 15;
+const DELAY_DIAS_MAX    = 60;
+
+// bucket = en qué días de la cotización interna se suma la extensión.
+// La entrega se calcula como aprobación + días; si se cambiara solo la fecha,
+// recepción la recalcularía desde los días y pisaría la extensión.
+const DELAY_REASONS = {
+  repuesto_atrasado:   { label: '📦 El repuesto se atrasó',                       cliente: 'el repuesto que necesita tu equipo se retrasó en llegar',        bucket: 'parts_days'   },
+  repuesto_danado:     { label: '⚠️ El repuesto llegó dañado o defectuoso',        cliente: 'el repuesto llegó dañado y tuvimos que pedir un reemplazo',       bucket: 'parts_days'   },
+  reparacion_compleja: { label: '🔧 La reparación es más compleja de lo previsto', cliente: 'la reparación resultó más compleja de lo previsto',               bucket: 'repair_days'  },
+  mas_pruebas:         { label: '🧪 Necesita más tiempo de pruebas',               cliente: 'tu equipo necesita más tiempo de pruebas para asegurar que quede bien', bucket: 'testing_days' },
+  otro:                { label: '✏️ Otro motivo',                                  cliente: '',                                                               bucket: 'repair_days'  }
+};
+
+// Fechas de calendario en hora de Honduras (UTC-6, sin horario de verano)
+function todayHN() { return new Date(Date.now() - 6 * 3600000).toISOString().split('T')[0]; }
+function addDaysISO(iso, n) { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().split('T')[0]; }
+function diffDaysISO(desde, hasta) { return Math.round((new Date(hasta + 'T12:00:00Z') - new Date(desde + 'T12:00:00Z')) / 86400000); }
+function fmtFecha(iso, style = 'long') { return new Date(iso + 'T12:00:00').toLocaleDateString('es-HN', { dateStyle: style }); }
+
+function daysOverdue(t) {
+  if (!DELAY_STATUSES.includes(t.status) || !t.repair_expected_at) return 0;
+  return Math.max(0, diffDaysISO(t.repair_expected_at, todayHN()));
+}
+
+// Base de la nueva fecha: si ya venció, se cuenta desde hoy; si no, sobre la fecha actual
+function delayBase(t) {
+  const hoy = todayHN();
+  return (t.repair_expected_at && t.repair_expected_at > hoy) ? t.repair_expected_at : hoy;
+}
+
+function renderDelayBanner() {
+  const el = document.getElementById('delayBanner');
+  if (!el) return;
+  const mios = allTickets.filter(t => t.assigned_to === session.id && daysOverdue(t) > 0)
+                         .sort((a, b) => daysOverdue(b) - daysOverdue(a));
+  if (!mios.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <h4>🔴 Tienes ${mios.length} ticket(s) atrasado(s)</h4>
+    <p>Cuéntanos qué está pasando con cada uno para avisarle al cliente la nueva fecha.</p>
+    <div class="db-list">
+      ${mios.map(t => `<button class="btn-sm btn-action-red" onclick="openDelayModal('${t.id}')">${t.ticket_number} · ${esc(t.brand || '')} ${esc(t.model || '')} · ${daysOverdue(t)}d</button>`).join('')}
+    </div>`;
+}
+
+function openDelayModal(ticketId) {
+  const t = allTickets.find(x => x.id === ticketId);
+  if (!t) return;
+  const atraso = daysOverdue(t);
+  document.getElementById('dlyTicket').textContent = `#${t.ticket_number}`;
+  document.getElementById('dlyEquipo').textContent = `${t.brand || ''} ${t.model || ''}`.trim() || 'este equipo';
+  document.getElementById('dlyActual').innerHTML = !t.repair_expected_at
+    ? 'Este ticket no tiene fecha de entrega todavía.'
+    : atraso > 0
+      ? `Debía entregarse el <b>${fmtFecha(t.repair_expected_at)}</b> — <b style="color:var(--red)">${atraso} día(s) de atraso</b>.`
+      : `Entrega actual al cliente: <b>${fmtFecha(t.repair_expected_at)}</b>.`;
+  document.getElementById('dlyDiasLbl').textContent = atraso > 0 || !t.repair_expected_at
+    ? '¿Cuántos días más necesitas, a partir de hoy? *'
+    : '¿Cuántos días más sobre la fecha actual? *';
+  const ov = document.getElementById('dlyOverlay');
+  ov.dataset.ticketId = ticketId;
+  document.getElementById('dlyMotivo').value  = '';
+  document.getElementById('dlyDetalle').value = '';
+  document.getElementById('dlyDias').value    = '';
+  updateDelayPreview();
+  ov.style.display = 'flex';
+  document.getElementById('dlyMotivo').focus();
+}
+
+function closeDelayModal() {
+  document.getElementById('dlyOverlay').style.display = 'none';
+  // Quitar ?atraso= para que al recargar no se vuelva a abrir
+  if (location.search.includes('atraso=')) history.replaceState(null, '', location.pathname);
+}
+
+function delayFormState() {
+  const ticketId = document.getElementById('dlyOverlay').dataset.ticketId;
+  const t        = allTickets.find(x => x.id === ticketId);
+  const motivo   = document.getElementById('dlyMotivo').value;
+  const detalle  = document.getElementById('dlyDetalle').value.trim();
+  const dias     = parseInt(document.getElementById('dlyDias').value, 10);
+  const diasOk   = Number.isInteger(dias) && dias >= 1 && dias <= DELAY_DIAS_MAX;
+  const nueva    = (t && diasOk) ? addDaysISO(delayBase(t), dias) : null;
+  return { ticketId, t, motivo, detalle, dias, diasOk, nueva,
+           valido: !!(t && motivo && detalle.length >= DELAY_DETALLE_MIN && diasOk) };
+}
+
+function updateDelayPreview() {
+  const s = delayFormState();
+  const falta = DELAY_DETALLE_MIN - s.detalle.length;
+  const cnt = document.getElementById('dlyCounter');
+  cnt.textContent = falta > 0 ? `Faltan ${falta} caracteres` : `${s.detalle.length} caracteres ✓`;
+  cnt.style.color = falta > 0 ? 'var(--muted)' : 'var(--green)';
+
+  const prev = document.getElementById('dlyPreview');
+  prev.innerHTML = s.nueva
+    ? `📅 Nueva fecha de entrega: <b style="color:var(--gold)">${fmtFecha(s.nueva)}</b>`
+      + (s.t?.repair_expected_at ? ` <span style="color:var(--muted)">(antes: ${fmtFecha(s.t.repair_expected_at, 'medium')})</span>` : '')
+    : (document.getElementById('dlyDias').value
+        ? `<span style="color:var(--red)">Ingresa entre 1 y ${DELAY_DIAS_MAX} días.</span>`
+        : '<span style="color:var(--muted)">Ingresa los días para ver la nueva fecha.</span>');
+
+  const btn = document.getElementById('dlyConfirmBtn');
+  btn.disabled = !s.valido;
+  btn.style.opacity = s.valido ? '1' : '.45';
+  btn.style.cursor  = s.valido ? 'pointer' : 'not-allowed';
+}
+
+async function confirmDelay() {
+  const s = delayFormState();
+  if (!s.valido) { showToast('⚠️ Completa motivo, detalle y días.'); return; }
+  const btn = document.getElementById('dlyConfirmBtn');
+  const restore = btnLoad(btn, 'Guardando…');
+  const reason  = DELAY_REASONS[s.motivo];
+
+  try {
+    // Datos frescos del ticket (la fecha pudo cambiar desde que se cargó el panel)
+    const { data: tkt, error: eT } = await sb.from('sp_tickets')
+      .select('status, repair_expected_at, testing_expected_at, access_token, sp_customers!sp_tickets_customer_id_fkey(full_name, email, phone)')
+      .eq('id', s.ticketId).single();
+    if (eT) throw eT;
+
+    const anterior = tkt.repair_expected_at || null;
+    const hoy      = todayHN();
+    const base     = (anterior && anterior > hoy) ? anterior : hoy;
+    const nueva    = addDaysISO(base, s.dias);
+    const atrasoPrevio = anterior ? Math.max(0, diffDaysISO(anterior, hoy)) : 0;
+
+    // 1) Sumar la extensión a los días de la cotización interna aprobada
+    if (anterior) {
+      const { data: qs } = await sb.from('sp_repair_quotes')
+        .select('id, repair_days, parts_days, testing_days')
+        .eq('ticket_id', s.ticketId).eq('quote_type', 'interna').eq('status', 'aprobada')
+        .order('approved_at', { ascending: false }).limit(1);
+      const qi = qs?.[0];
+      const delta = diffDaysISO(anterior, nueva);
+      if (qi && delta > 0) {
+        const { error: eQ } = await sb.from('sp_repair_quotes')
+          .update({ [reason.bucket]: (qi[reason.bucket] || 0) + delta })
+          .eq('id', qi.id);
+        if (eQ) throw eQ;
+      }
+    }
+
+    // 2) Nueva fecha + resetear avisos para que vuelvan a correr con la fecha nueva
+    const upd = { repair_expected_at: nueva, deadline_warning_sent_at: null, last_overdue_alert_at: null };
+    if (tkt.status === 'en_pruebas') { upd.testing_expected_at = nueva; upd.last_testing_overdue_alert_at = null; }
+    const { error: eU } = await sb.from('sp_tickets').update(upd).eq('id', s.ticketId);
+    if (eU) throw eU;
+
+    // 3) Dejar constancia en las notas técnicas
+    const fAnt = anterior ? fmtFecha(anterior, 'medium') : 'sin fecha';
+    try {
+      await sb.from('sp_ticket_internal_notes').insert({
+        ticket_id: s.ticketId, note_type: 'tecnico', author_id: session.id,
+        content: `⏱️ Atraso reportado — ${reason.label}\n${s.detalle}\nEntrega: ${fAnt} → ${fmtFecha(nueva, 'medium')} (+${s.dias} día(s))`
+      });
+      delete notesCache[s.ticketId];
+    } catch (_) {}
+
+    // 4) Avisar al cliente (WhatsApp + correo) con el motivo y la nueva fecha
+    const cu     = tkt.sp_customers;
+    const equipo = `${s.t.brand || ''} ${s.t.model || ''}`.trim();
+    const porque = reason.cliente ? ` porque ${reason.cliente}` : '';
+    const antes  = anterior ? `\n(fecha anterior: ${fmtFecha(anterior)})` : '';
+    let waOk = false, mailOk = false;
+
+    if (cu?.phone) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cu.phone, ticket_id: s.ticketId, recipient_type: 'client',
+            message: `⏱️ *Focus Store Soporte — Actualización de tu reparación*\n\nHola ${cu.full_name}, queremos avisarte que la entrega de tu *${equipo}* se va a retrasar${porque}.\n\n🎫 Ticket: #${s.t.ticket_number}\n\n🔎 *Detalle del técnico:*\n${s.detalle}\n\n📅 Nueva fecha estimada de entrega: *${fmtFecha(nueva)}*${antes}\n\nLamentamos el inconveniente y agradecemos tu paciencia. Te avisaremos apenas esté listo. 🙏\n*Focus Store Honduras*`
+          })
+        });
+        waOk = r.ok;
+      } catch (_) {}
+    }
+    if (cu?.email) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'staff_message', ticket_id: s.ticketId,
+            clientName: cu.full_name, clientEmail: cu.email,
+            ticketNumber: s.t.ticket_number, deviceBrand: s.t.brand || '', deviceModel: s.t.model || '',
+            portalToken: tkt.access_token,
+            staffMessage: `Queremos avisarte que la entrega de tu ${equipo} se va a retrasar${porque}.\n\nDetalle del técnico:\n${s.detalle}\n\nNueva fecha estimada de entrega: ${fmtFecha(nueva)}${antes}\n\nLamentamos el inconveniente y agradecemos tu paciencia. Te avisaremos apenas esté listo.`
+          })
+        });
+        mailOk = r.ok;
+      } catch (_) {}
+    }
+
+    // 5) Avisar a los admins con el detalle completo
+    const avisoCli = (waOk || mailOk)
+      ? `✅ Cliente notificado (${[waOk && 'WhatsApp', mailOk && 'correo'].filter(Boolean).join(' + ')})`
+      : '⚠️ *No se pudo notificar al cliente* — avísale manualmente';
+    try {
+      await notifyAdmins(
+        `⏱️ *Atraso reportado — Ticket #${s.t.ticket_number}*\n\n👨‍🔧 ${session.full_name || 'Técnico'} reportó un atraso.\n\n🖥️ Equipo: ${equipo}\n📌 Motivo: ${reason.label}\n🔎 Detalle: ${s.detalle}\n📅 Entrega: ${fAnt} → *${fmtFecha(nueva, 'medium')}* (+${s.dias} día(s))` +
+        (atrasoPrevio > 0 ? `\n⚠️ Llevaba ${atrasoPrevio} día(s) de atraso.` : '') +
+        `\n\n${avisoCli}\n\n🔗 https://soporte.focusstore.net/recepcion/ticket.html?id=${s.ticketId}`
+      );
+    } catch (_) {}
+
+    restore();
+    closeDelayModal();
+    showToast((waOk || mailOk) ? '✅ Nueva fecha guardada — cliente notificado'
+                               : '⚠️ Fecha guardada, pero no se pudo notificar al cliente');
+    await loadTickets();
+  } catch (ex) {
+    restore();
+    showToast('⚠️ Error: ' + ex.message);
+  }
 }
 
 /* ── Motivo obligatorio al marcar irreparable ────────────────── */
@@ -1364,6 +1632,52 @@ window.addEventListener('pageshow', e => { if (e.persisted) location.reload(true
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn-sm btn-ghost" style="flex:1" onclick="closeActModal()">Cancelar</button>
       <button class="btn-sm" id="actModalConfirmBtn" style="flex:1" onclick="confirmActModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: reportar atraso (motivo + nueva fecha → cliente) ── -->
+<div id="dlyOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:26px 22px;width:480px;max-width:92vw;max-height:92vh;overflow-y:auto">
+    <h3 style="font-size:17px;margin-bottom:6px">⏱️ ¿Qué está pasando con este equipo?</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
+      <span id="dlyTicket" style="font-weight:700"></span> · <span id="dlyEquipo"></span>
+    </p>
+    <p id="dlyActual" style="font-size:12.5px;margin-bottom:14px"></p>
+
+    <div style="background:rgba(255,193,0,.08);border:1px solid rgba(255,193,0,.3);border-radius:10px;padding:10px 12px;margin-bottom:14px">
+      <p style="font-size:11.5px;line-height:1.5;color:var(--text);margin:0">
+        📤 El motivo, tu explicación y la nueva fecha <b>se le envían al cliente por WhatsApp y correo</b>. Escríbelo en palabras claras, como se lo dirías en persona.
+      </p>
+    </div>
+
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Motivo *</label>
+    <select id="dlyMotivo" onchange="updateDelayPreview()"
+      style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13.5px;padding:10px 12px;margin:8px 0 14px;outline:none;font-family:inherit">
+      <option value="">Selecciona el motivo…</option>
+      <option value="repuesto_atrasado">📦 El repuesto se atrasó</option>
+      <option value="repuesto_danado">⚠️ El repuesto llegó dañado o defectuoso</option>
+      <option value="reparacion_compleja">🔧 La reparación es más compleja de lo previsto</option>
+      <option value="mas_pruebas">🧪 Necesita más tiempo de pruebas</option>
+      <option value="otro">✏️ Otro motivo</option>
+    </select>
+
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Explícale al cliente qué pasó *</label>
+    <textarea id="dlyDetalle" rows="3" oninput="updateDelayPreview()"
+      placeholder="Ej: El flex de la pantalla que pedimos llegó con un pin doblado. Ya solicitamos el reemplazo al proveedor y llega el lunes."
+      style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13.5px;line-height:1.5;padding:12px;margin-top:8px;outline:none;font-family:inherit;resize:vertical"></textarea>
+    <div id="dlyCounter" style="font-size:11px;color:var(--muted);margin:4px 0 14px;text-align:right"></div>
+
+    <label id="dlyDiasLbl" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)"></label>
+    <input type="number" id="dlyDias" min="1" max="60" placeholder="Ej: 4" oninput="updateDelayPreview()"
+      style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:20px;padding:10px;margin-top:8px;outline:none;text-align:center;font-family:inherit">
+    <div id="dlyPreview" style="font-size:13px;margin-top:10px;min-height:18px"></div>
+
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn-sm btn-ghost" style="flex:1" onclick="closeDelayModal()">Cancelar</button>
+      <button class="btn-sm btn-primary" id="dlyConfirmBtn" style="flex:1.6" onclick="confirmDelay()">
+        Guardar y avisar al cliente
+      </button>
     </div>
   </div>
 </div>
