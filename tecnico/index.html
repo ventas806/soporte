@@ -612,12 +612,6 @@ async function getBalanceDetail(ticketId, paid) {
   } catch(_) { return null; }
 }
 
-/* Línea corta para el cliente (solo el saldo). */
-async function getSaldoLine(ticketId, paid) {
-  const b = await getBalanceDetail(ticketId, paid);
-  if (b && b.saldo > 0) return `\n💰 Saldo pendiente: *${fmtL(b.saldo)}* — se cancela al recoger el equipo.\n`;
-  return '';
-}
 
 /* Desglose detallado para el administrador. */
 function buildAdminBalanceBlock(b) {
@@ -938,6 +932,13 @@ async function changeStatus(ticketId, currentStatus) {
   // Irreparable exige motivo escrito: se guarda y se le manda al cliente.
   if (newStatus === 'irreparable') { openIrreparableModal(ticketId); return; }
 
+  // Reparación / pruebas / listo van por el MISMO formulario que los botones de acción:
+  // pide los días, pone la fecha de entrega y avisa al cliente. Antes el selector cambiaba
+  // el estado sin fecha y el ticket quedaba invisible para todos los recordatorios
+  // (TKT-2026-0054: 12 días en pruebas sin un solo aviso).
+  const viaFormulario = { en_reparacion: 'repair', en_pruebas: 'testing', listo_para_entrega: 'ready' };
+  if (viaFormulario[newStatus]) { openActModal(viaFormulario[newStatus], ticketId); return; }
+
   await applyStatusChange(ticketId, newStatus, null);
 }
 
@@ -952,46 +953,9 @@ async function applyStatusChange(ticketId, newStatus, motivo) {
       .eq('id', ticketId).single();
     const balance = await getBalanceDetail(ticketId, tkt?.paid_amount);
 
-    // Notificar al cliente si el equipo quedó listo para entrega
-    // (el override manual saltaba esta notificación — el cliente nunca se enteraba)
+    // "Listo para entrega" ya no pasa por aquí: va por el formulario de acción (confirmActModal),
+    // que avisa al cliente con su saldo y a los admins.
     let notified = false;
-    if (newStatus === 'listo_para_entrega') {
-      const cu    = tkt?.sp_customers;
-      const token = tkt?.access_token;
-      const brand = t?.brand || '';
-      const model = t?.model || '';
-      const equip = `${brand} ${model}`.trim();
-      const saldoLine = (balance && balance.saldo > 0)
-        ? `\n💰 Saldo pendiente: *${fmtL(balance.saldo)}* — se cancela al recoger el equipo.\n`
-        : '';
-
-      if (cu?.email && token) {
-        try {
-          await fetch(`${SUPABASE_URL}/functions/v1/send-ticket-email`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'ready_for_pickup',
-              clientName: cu.full_name, clientEmail: cu.email,
-              ticketNumber: t?.ticket_number || '', deviceBrand: brand, deviceModel: model,
-              portalToken: token
-            })
-          });
-          notified = true;
-        } catch(_) {}
-      }
-      if (cu?.phone) {
-        try {
-          await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: cu.phone,
-              message: `✅ *¡Tu equipo está listo!*\n\nHola ${cu.full_name}, tu *${equip}* ya puede ser recogido en nuestra tienda.\n\n🎫 Ticket: #${t?.ticket_number || ''}\n${saldoLine}\n📍 *Focus Store Honduras*\n¡Gracias por tu preferencia! 😊`
-            })
-          });
-          notified = true;
-        } catch(_) {}
-      }
-    }
 
     // Equipo sin reparación posible — mismo aviso que manda recepción
     // (antes el técnico podía marcarlo desde su panel y el cliente nunca se enteraba)

@@ -1561,17 +1561,17 @@ async function changeStatus(btn) {
 
   if (newStatus === 'esperando_repuesto') {
     const days = parseInt(document.getElementById('partsDays').value);
-    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados para el repuesto.'); return; }
+    if (!days || days < 1) { restore(); showToast('⚠️ Ingrese los días estimados para el repuesto.'); return; }
     partsExpectedAt = calcDate(days);
   }
   if (newStatus === 'en_reparacion') {
     const days = parseInt(document.getElementById('repairDays').value);
-    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados de reparación.'); return; }
+    if (!days || days < 1) { restore(); showToast('⚠️ Ingrese los días estimados de reparación.'); return; }
     repairExpectedAt = calcDate(days);
   }
   if (newStatus === 'en_pruebas') {
     const days = parseInt(document.getElementById('testingDays').value);
-    if (!days || days < 1) { showToast('⚠️ Ingrese los días estimados de pruebas.'); return; }
+    if (!days || days < 1) { restore(); showToast('⚠️ Ingrese los días estimados de pruebas.'); return; }
     testingExpectedAt = calcDate(days);
   }
 
