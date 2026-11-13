@@ -231,6 +231,13 @@
       pointer-events:none; z-index:200; white-space:nowrap; }
     .toast.show { transform:translateX(-50%) translateY(0); }
 
+    /* Barra "ver como" (solo admin/supervisor) */
+    .viewas-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      background:rgba(245,200,66,.08); border:1px solid rgba(245,200,66,.35);
+      border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:var(--gold); }
+    .viewas-bar select { min-width:180px; }
+    .viewas-bar a { margin-left:auto; color:var(--muted); text-decoration:none; font-size:12px; }
+
     @media (max-width:500px) {
       .stats-row { grid-template-columns:1fr 1fr 1fr; }
       .eq-details { grid-template-columns:1fr; }
@@ -265,11 +272,18 @@
     <p>Vista técnica — los datos personales del cliente no están disponibles en esta vista.</p>
   </div>
 
+  <!-- Admin/supervisor: ver el panel como un técnico -->
+  <div id="viewAsBar" class="viewas-bar" style="display:none">
+    <span>👁 Estás viendo el panel como:</span>
+    <select class="sm" id="viewAsSel" onchange="setViewAs(this.value)"></select>
+    <a href="../recepcion/index.html">← Volver a recepción</a>
+  </div>
+
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat blue" id="statMy" onclick="filterView('mine')">
       <div class="stat-n" id="statMyN">—</div>
-      <div class="stat-l">Mis tickets activos</div>
+      <div class="stat-l" id="statMyL">Mis tickets activos</div>
     </div>
     <div class="stat gold" id="statUnassigned" onclick="filterView('unassigned')">
       <div class="stat-n" id="statUnN">—</div>
@@ -285,7 +299,7 @@
   <div class="filter-row">
     <input class="search-inp" type="text" id="searchInp" placeholder="🔍 Buscar por ticket, equipo…" oninput="applyFilter()">
     <select class="sm" id="viewFilter" onchange="applyFilter()">
-      <option value="mine">Mis tickets</option>
+      <option value="mine" id="optMine">Mis tickets</option>
       <option value="unassigned">Sin asignar</option>
       <option value="all">Todos los activos</option>
       <option value="diag">En diagnóstico</option>
@@ -360,6 +374,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   av.style.color      = session.color || '#3d6aff';
   document.getElementById('userName').textContent = session.full_name.split(' ')[0];
 
+  if (isAdminView()) await initViewAs();
+
   await loadTickets();
 
   // El aviso de atraso por WhatsApp trae ?atraso=<id>: abrir directo el formulario
@@ -374,6 +390,65 @@ function getSession() {
     if (Date.now() - s.logged_in_at > 8 * 3600 * 1000) { localStorage.removeItem('sp_session'); return null; }
     return s;
   } catch (_) { return null; }
+}
+
+/* ── Admin/supervisor: ver el panel como un técnico ──────────────
+   El técnico ve "Mis tickets" = los asignados a él. El admin elige a quién
+   está mirando ('' = todos los técnicos). Las notas y acciones siguen
+   quedando a nombre de quien inició sesión. */
+let viewTechId = '';
+let techList   = [];
+
+function isAdminView() { return ['admin', 'supervisor'].includes(session?.role); }
+
+// Id del técnico cuyo panel se está viendo ('' = todos)
+function techId() { return isAdminView() ? viewTechId : session.id; }
+
+function isMine(t) {
+  const id = techId();
+  return id ? t.assigned_to === id : !!t.assigned_to;
+}
+
+function viewName() {
+  if (!isAdminView()) return null;
+  const t = techList.find(x => x.id === viewTechId);
+  return t ? t.full_name.split(' ')[0] : null;
+}
+
+async function initViewAs() {
+  try {
+    const { data } = await sb.from('sp_profiles')
+      .select('id, full_name').eq('role', 'tecnico').eq('is_active', true).order('full_name');
+    techList = data || [];
+  } catch (_) { techList = []; }
+
+  let saved = null;
+  try { saved = localStorage.getItem('sp_viewas'); } catch (_) {}
+  viewTechId = (saved !== null && (saved === '' || techList.some(t => t.id === saved)))
+    ? saved : (techList[0]?.id || '');
+
+  const sel = document.getElementById('viewAsSel');
+  sel.innerHTML = techList.map(t => `<option value="${t.id}">🔧 ${esc(t.full_name)}</option>`).join('')
+    + `<option value="">👥 Todos los técnicos</option>`;
+  sel.value = viewTechId;
+  document.getElementById('viewAsBar').style.display = 'flex';
+  updateViewLabels();
+}
+
+function setViewAs(id) {
+  viewTechId = id;
+  try { localStorage.setItem('sp_viewas', id); } catch (_) {}
+  updateViewLabels();
+  updateStats();
+  applyFilter();
+  renderDelayBanner();
+}
+
+function updateViewLabels() {
+  const n = viewName();
+  const lbl = !isAdminView() ? 'Mis tickets' : n ? `Tickets de ${n}` : 'Asignados';
+  document.getElementById('statMyL').textContent = isAdminView() ? lbl : 'Mis tickets activos';
+  document.getElementById('optMine').textContent = lbl;
 }
 
 /* ── Load tickets (uses sp_ticket_tecnico_view — NO customer data) ── */
@@ -402,7 +477,7 @@ async function loadTickets() {
 }
 
 function updateStats() {
-  const mine       = allTickets.filter(t => t.assigned_to === session.id).length;
+  const mine       = allTickets.filter(isMine).length;
   const unassigned = allTickets.filter(t => !t.assigned_to).length;
   const diag       = allTickets.filter(t => t.status === 'en_diagnostico').length;
   document.getElementById('statMyN').textContent   = mine;
@@ -426,7 +501,7 @@ function applyFilter() {
 
   let filtered = allTickets;
 
-  if (view === 'mine')       filtered = filtered.filter(t => t.assigned_to === session.id);
+  if (view === 'mine')       filtered = filtered.filter(isMine);
   if (view === 'unassigned') filtered = filtered.filter(t => !t.assigned_to);
   if (view === 'diag')       filtered = filtered.filter(t => t.status === 'en_diagnostico');
 
@@ -531,8 +606,8 @@ function renderTickets(tickets) {
         <div class="tc-actions">
           <select class="sm" id="st-${t.id}">${statusOpts}</select>
           <button class="btn-sm btn-primary" onclick="changeStatus('${t.id}','${t.status}')">Actualizar estado</button>
-          ${!t.assigned_to || t.assigned_to !== session.id
-            ? `<button class="btn-sm btn-ghost" onclick="takeTicket('${t.id}')">📌 Tomar ticket</button>` : ''}
+          ${techId() && t.assigned_to !== techId()
+            ? `<button class="btn-sm btn-ghost" onclick="takeTicket('${t.id}')">📌 ${viewName() ? 'Asignar a ' + esc(viewName()) : 'Tomar ticket'}</button>` : ''}
         </div>
 
         <!-- Technical note -->
@@ -692,12 +767,13 @@ function delayBase(t) {
 function renderDelayBanner() {
   const el = document.getElementById('delayBanner');
   if (!el) return;
-  const mios = allTickets.filter(t => t.assigned_to === session.id && daysOverdue(t) > 0)
+  const mios = allTickets.filter(t => isMine(t) && daysOverdue(t) > 0)
                          .sort((a, b) => daysOverdue(b) - daysOverdue(a));
   if (!mios.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
+  const quien = !isAdminView() ? 'Tienes' : viewName() ? `${esc(viewName())} tiene` : 'Hay';
   el.innerHTML = `
-    <h4>🔴 Tienes ${mios.length} ticket(s) atrasado(s)</h4>
+    <h4>🔴 ${quien} ${mios.length} ticket(s) atrasado(s)</h4>
     <p>Cuéntanos qué está pasando con cada uno para avisarle al cliente la nueva fecha.</p>
     <div class="db-list">
       ${mios.map(t => `<button class="btn-sm btn-action-red" onclick="openDelayModal('${t.id}')">${t.ticket_number} · ${esc(t.brand || '')} ${esc(t.model || '')} · ${daysOverdue(t)}d</button>`).join('')}
@@ -1030,13 +1106,17 @@ async function takeTicket(ticketId) {
     const earlyStatuses = ['solicitud_recibida', 'equipo_en_camino', 'equipo_recibido'];
     const autoDiag = t && earlyStatuses.includes(t.status);
 
-    const payload = { assigned_to: session.id };
+    // Admin viendo como técnico: se asigna al técnico que está mirando, no al admin
+    const asignarA = techId();
+    if (!asignarA) return;
+    const payload = { assigned_to: asignarA };
     if (autoDiag) payload.status = 'en_diagnostico';
 
     const { error } = await sb.from('sp_tickets').update(payload).eq('id', ticketId);
     if (error) throw error;
 
-    showToast(autoDiag ? '🔍 Ticket tomado — iniciando diagnóstico' : '✅ Ticket asignado a ti');
+    const aQuien = viewName() ? `a ${viewName()}` : 'a ti';
+    showToast(autoDiag ? `🔍 Ticket asignado ${aQuien} — iniciando diagnóstico` : `✅ Ticket asignado ${aQuien}`);
     setTimeout(() => loadTickets(), 800);
   } catch (ex) { showToast('⚠️ Error: ' + ex.message); }
 }
